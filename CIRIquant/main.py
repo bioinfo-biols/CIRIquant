@@ -7,7 +7,9 @@ import argparse
 
 
 def main():
-    import utils
+    import align
+    import pipeline
+    import circ
     from logger import get_logger
     from utils import check_file, check_dir, check_config, get_thread_num
 
@@ -25,6 +27,8 @@ def main():
                         help='Run in debugging mode', )
     parser.add_argument('-e', '--log', dest='log_file', default=None, metavar='LOG',
                         help='Log file', )
+    parser.add_argument('--circ', dest='circ', metavar='FILE', default=None,
+                        help='bed file for putative circRNAs (optional)', )
     parser.add_argument('-o', '--out', dest='output', metavar='DIR', default=None,
                         help='Output directory (default: current directory)', )
     parser.add_argument('-p', '--prefix', dest='prefix', metavar='PREFIX', default=None,
@@ -43,6 +47,11 @@ def main():
         reads = [os.path.abspath(args.mate1), os.path.abspath(args.mate2)]
     else:
         sys.exit('No input files specified')
+
+    if args.circ and check_file(args.circ):
+        circ_file = os.path.abspath(args.circ)
+    else:
+        circ_file = None
 
     # check output dir
     if args.prefix is None:
@@ -76,9 +85,29 @@ def main():
     config = check_config(config_file)
     thread = get_thread_num(int(args.cpu_threads))
 
-    # Change into output directory
-    hisat_bam
+    # Step1: Data Preparation
+    # Step1.1: HISAT2 mapping
+    hisat_bam = pipeline.align_genome(log_file, thread, reads, outdir, prefix, config)
 
+    # Step1.2: Estimate Gene Abundance
+    pipeline.gene_abundance(log_file, thread, outdir, prefix, hisat_bam, config)
+
+    # Step2: circRNA Prediction
+    # cand_reads, stat = align.unmapped_reads(log_file, thread, outdir, prefix, hisat_bam, config)
+    cand_reads = ['/histor/zhao/zhangjy/dev/CIRIquant2/test_data/test/circ/test_unmapped_1.fq',
+                  '/histor/zhao/zhangjy/dev/CIRIquant2/test_data/test/circ/test_unmapped_2.fq']
+    stat = {'cleaned_reads': 1204776, 'mapped_reads': 1088988}
+
+    # Step3: run CIRI2
+    if circ_file is None:
+        bwa_sam = pipeline.run_bwa(log_file, thread, cand_reads, outdir, prefix, config)
+        ciri_file = pipeline.run_ciri(log_file, thread, bwa_sam, outdir, prefix, config)
+        circ_file = pipeline.convert_bed(ciri_file)
+    else:
+        logger.info('Using putative circRNA bed file: {}'.format(os.path.basename(circ_file)))
+
+    # Step4: estimate circRNA expression level
+    circ.proc(log_file, thread, circ_file, cand_reads, outdir, prefix, config)
 
 if __name__ == '__main__':
     main()

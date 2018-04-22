@@ -1,9 +1,9 @@
 #! /usr/bin/env python
 # -*- encoding:utf-8 -*-
-import logging
 import os
 import sys
 import time
+import logging
 
 
 def get_logger(logger_name='logger', fname=None, verbosity=False):

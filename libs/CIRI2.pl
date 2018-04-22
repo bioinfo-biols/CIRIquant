@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 ############################################################################
 # Copyright (c) 2011-2017 BIOLS, CAS
 # All Rights Reserved
