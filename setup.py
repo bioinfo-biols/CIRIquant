@@ -12,18 +12,13 @@ def read(infile):
 
 
 setup(
-    name='CIRI_Quant',
+    name='CIRIquant',
     version=__version__,
-    packages=find_packages(),
-    entry_points={
-        'console_scripts': [
-            'CIRIquant=CIRIquant.main:main',
-        ]
-    },
-    url='https://github.com/Kevinzjy/CIRI_Quant2',
-    license='MIT',
     author='Jinyang Zhang',
     author_email='zhangjinyang@biols.ac.cn',
+    maintainer='Jinyang Zhang',
+    maintainer_email='zhangjinyang@biols.ac.cn',
+    url='https://github.com/Kevinzjy/CIRI_Quant2',
     description='circular RNA quantification pipeline',
     long_description=read('README.md'),
     classifiers=[
@@ -32,6 +27,14 @@ setup(
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
     ],
+    license='MIT',
+
+    packages=find_packages(),
+    entry_points={
+        'console_scripts': [
+            'CIRIquant=CIRIquant.main:main',
+        ]
+    },
     keywords='circRNA',
     include_package_data=True,
     zip_safe=False,
