@@ -117,6 +117,7 @@ def write_fastq(rname, seq, qual, fh):
 
 
 def unmapped_reads(log_file, thread, outdir, prefix, hisat_bam, config):
+    import gzip
     from utils import check_dir, subprocess_setup
     logger.info('Extracting circular candidate reads ..')
     unmapped_dir = outdir + '/circ'
@@ -129,9 +130,9 @@ def unmapped_reads(log_file, thread, outdir, prefix, hisat_bam, config):
                              preexec_fn=subprocess_setup)
     infile = fpipe.stdout
 
-    cand_reads = ['{}/{}_unmapped_1.fq'.format(unmapped_dir, prefix),
-                  '{}/{}_unmapped_2.fq'.format(unmapped_dir, prefix), ]
-    with open(cand_reads[0], 'w') as r1, open(cand_reads[1], 'w') as r2:
+    cand_reads = ['{}/{}_unmapped_1.fq.gz'.format(unmapped_dir, prefix),
+                  '{}/{}_unmapped_2.fq.gz'.format(unmapped_dir, prefix), ]
+    with gzip.open(cand_reads[0], 'wb') as r1, gzip.open(cand_reads[1], 'wb') as r2:
         stat = proc_unmapped(infile, r1, r2)
 
     fpipe.communicate()

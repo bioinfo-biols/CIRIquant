@@ -4,6 +4,7 @@ import os
 import sys
 import re
 import argparse
+import simplejson as json
 
 
 def main():
@@ -93,10 +94,7 @@ def main():
     pipeline.gene_abundance(log_file, thread, outdir, prefix, hisat_bam, config)
 
     # Step2: circRNA Prediction
-    # cand_reads, stat = align.unmapped_reads(log_file, thread, outdir, prefix, hisat_bam, config)
-    cand_reads = ['/histor/zhao/zhangjy/dev/CIRIquant2/test_data/test/circ/test_unmapped_1.fq',
-                  '/histor/zhao/zhangjy/dev/CIRIquant2/test_data/test/circ/test_unmapped_2.fq']
-    stat = {'cleaned_reads': 1204776, 'mapped_reads': 1088988}
+    cand_reads, stat = align.unmapped_reads(log_file, thread, outdir, prefix, hisat_bam, config)
 
     # Step3: run CIRI2
     if circ_file is None:
@@ -107,7 +105,14 @@ def main():
         logger.info('Using putative circRNA bed file: {}'.format(os.path.basename(circ_file)))
 
     # Step4: estimate circRNA expression level
-    circ.proc(log_file, thread, circ_file, cand_reads, outdir, prefix, config)
+    output_file, tmp = circ.proc(log_file, thread, circ_file, cand_reads, outdir, prefix, config)
+    stat.update(tmp)
+
+    stat_file = '{}/{}.stat'.format(outdir, prefix)
+    with open(stat_file, 'w') as js:
+        json.dump(stat, js)
+    logger.info('Finished, see {} for circRNA expression profile'.format(output_file))
+
 
 if __name__ == '__main__':
     main()

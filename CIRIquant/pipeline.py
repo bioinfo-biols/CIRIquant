@@ -24,9 +24,9 @@ def align_genome(log_file, thread, reads, outdir, prefix, config):
         hisat_bam
     )
     logger.debug(hisat_cmd)
-    ## Remove comment to run command
-    # with open(log_file, 'a') as log:
-    #     subprocess.call(hisat_cmd, shell=True, stderr=log)
+
+    with open(log_file, 'a') as log:
+        subprocess.call(hisat_cmd, shell=True, stderr=log)
     logger.debug('HISAT2 bam: ' + hisat_bam)
     return hisat_bam
 
@@ -45,9 +45,8 @@ def gene_abundance(log_file, thread, outdir, prefix, hisat_bam, config):
         hisat_bam,
     )
     logger.debug(sort_cmd)
-    ## Remove comment to run command
-    # with open(log_file, 'a') as log:
-    #     subprocess.call(sort_cmd, shell=True, stderr=log)
+    with open(log_file, 'a') as log:
+        subprocess.call(sort_cmd, shell=True, stderr=log)
 
     # estimate gene expression
     logger.info('Estimate gene abundance ..')
@@ -62,9 +61,8 @@ def gene_abundance(log_file, thread, outdir, prefix, hisat_bam, config):
         thread,
     )
     logger.debug(stringtie_cmd)
-    ## Remove comment to run command
-    # with open(log_file, 'a') as log:
-    #     subprocess.call(stringtie_cmd, shell=True, stderr=log)
+    with open(log_file, 'a') as log:
+        subprocess.call(stringtie_cmd, shell=True, stderr=log)
     logger.debug('Gene expression profile: {}/{}_genes.list'.format(gene_dir, prefix))
     return 1
 
@@ -82,10 +80,8 @@ def run_bwa(log_file, thread, cand_reads, outdir, prefix, config):
         bwa_sam,
     )
     logger.debug(bwa_cmd)
-
-    # # Remove comment to run command
-    # with open(log_file, 'a') as log:
-    #     subprocess.call(bwa_cmd, shell=True, stderr=log, stdout=log)
+    with open(log_file, 'a') as log:
+        subprocess.call(bwa_cmd, shell=True, stderr=log, stdout=log)
     return bwa_sam
 
 
@@ -101,9 +97,8 @@ def run_ciri(log_file, thread, bwa_sam, outdir, prefix, config):
         log_file,
     )
     logger.debug(ciri_cmd)
-    ## Remove comment to run command
-    # with open(log_file, 'a') as log:
-    #     subprocess.call(ciri_cmd, shell=True, stderr=log, stdout=log)
+    with open(log_file, 'a') as log:
+        subprocess.call(ciri_cmd, shell=True, stderr=log, stdout=log)
     return ciri_file
 
 
