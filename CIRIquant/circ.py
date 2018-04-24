@@ -7,8 +7,6 @@ import logging
 import subprocess
 from collections import defaultdict
 
-import pdb
-
 from align import SamParser
 logger = logging.getLogger('CIRIquant')
 
@@ -101,7 +99,7 @@ def generate_index(log_file, circ_info, config, circ_fasta):
             for circ_id in chrom_circ:
                 parser = chrom_circ[circ_id]
                 circ_seq = chrom_seq[parser.start:parser.end + 1] * 2
-                if circ_seq.count('N') > len(circ_seq) * 0.5:
+                if circ_seq.count('N') > len(circ_seq) * 0.5 or len(circ_seq) == 0:
                     continue
                 out.write('>{}'.format(parser.id) + '\n')
                 out.write(circ_seq + '\n')
@@ -217,7 +215,11 @@ def mapped_fsj_reads(log_file, circ_info, bsj_reads, hisat_bam, config):
     return start_info, end_info
 
 
-def proc(log_file, thread, circ_file, reads, outdir, prefix, config):
+def proc(log_file, thread, circ_file, hisat_bam, reads, outdir, prefix, config):
+    from utils import check_dir
+    circ_dir = '{}/circ'.format(outdir)
+    check_dir(circ_dir)
+
     circ_fasta = '{}/circ/{}_index.fa'.format(outdir, prefix)
     circ_info = load_bed(circ_file)
 
@@ -241,7 +243,6 @@ def proc(log_file, thread, circ_file, reads, outdir, prefix, config):
             coverage[circ_id] = coverage.setdefault(circ_id, 0) + 1
         bsj_info[circ_id].append(read_id)
 
-    hisat_bam = '{}/align/{}.bam'.format(outdir, prefix)
     start_info, end_info = mapped_fsj_reads(log_file, circ_info, bsj_reads, hisat_bam, config)
 
     fsj_info = defaultdict(dict)

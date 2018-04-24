@@ -26,16 +26,21 @@ def main():
 
     parser.add_argument('-v', '--verbose', dest='verbosity', default=False, action='store_true',
                         help='Run in debugging mode', )
+    parser.add_argument('--no-gene', dest='gene_exp', default=False, action='store_true',
+                        help='Skip stringtie estimation for gene abundance', )
     parser.add_argument('-e', '--log', dest='log_file', default=None, metavar='LOG',
                         help='Log file', )
     parser.add_argument('--circ', dest='circ', metavar='FILE', default=None,
                         help='bed file for putative circRNAs (optional)', )
+    parser.add_argument('--bam', dest='bam', metavar='BAM', default=None,
+                        help='hisat2 alignment to reference genome', )
     parser.add_argument('-o', '--out', dest='output', metavar='DIR', default=None,
                         help='Output directory (default: current directory)', )
     parser.add_argument('-p', '--prefix', dest='prefix', metavar='PREFIX', default=None,
                         help='Output sample prefix (default: input sample name)', )
     parser.add_argument('-t', '--threads', dest='cpu_threads', default=4, metavar='INT',
                         help='Number of CPU threads', )
+
     args = parser.parse_args()
 
     # Add lib to PATH
@@ -49,10 +54,16 @@ def main():
     else:
         sys.exit('No input files specified')
 
+    # optional input
     if args.circ and check_file(args.circ):
         circ_file = os.path.abspath(args.circ)
     else:
         circ_file = None
+
+    if args.bam and check_file(args.bam):
+        hisat_bam = os.path.abspath(args.circ)
+    else:
+        hisat_bam = None
 
     # check output dir
     if args.prefix is None:
@@ -86,18 +97,35 @@ def main():
     config = check_config(config_file)
     thread = get_thread_num(int(args.cpu_threads))
 
+    stat = {}
     # Step1: Data Preparation
     # Step1.1: HISAT2 mapping
-    hisat_bam = pipeline.align_genome(log_file, thread, reads, outdir, prefix, config)
+    if hisat_bam is None:
+        logger.info('Align RNA-seq reads to reference genome ..')
+        hisat_bam = pipeline.align_genome(log_file, thread, reads, outdir, prefix, config)
+    else:
+        logger.info('HISAT2 alignment bam provided, skipping alignment step ..')
+    logger.debug('HISAT2 bam: {}'.format(os.path.basename(hisat_bam)))
 
     # Step1.2: Estimate Gene Abundance
-    pipeline.gene_abundance(log_file, thread, outdir, prefix, hisat_bam, config)
+    if args.gene_exp:
+        logger.info('Skipping gene abundance estimation')
+    else:
+        pipeline.gene_abundance(log_file, thread, outdir, prefix, hisat_bam, config)
 
     # Step2: circRNA Prediction
-    cand_reads, stat = align.unmapped_reads(log_file, thread, outdir, prefix, hisat_bam, config)
+    if args.bam:
+        logger.info('Candidate reads provided, skip scanning step ..')
+        cand_reads = reads
+    else:
+        logger.info('Extracting circular candidate reads ..')
+        cand_reads, tmp = align.unmapped_reads(log_file, thread, outdir, prefix, hisat_bam, config)
+        stat.update(tmp)
+    logger.debug('circRNA reads: ' + ','.join(cand_reads))
 
     # Step3: run CIRI2
     if circ_file is None:
+        logger.info('No circRNA information provided, run prediction step ..')
         bwa_sam = pipeline.run_bwa(log_file, thread, cand_reads, outdir, prefix, config)
         ciri_file = pipeline.run_ciri(log_file, thread, bwa_sam, outdir, prefix, config)
         circ_file = pipeline.convert_bed(ciri_file)
@@ -105,12 +133,13 @@ def main():
         logger.info('Using putative circRNA bed file: {}'.format(os.path.basename(circ_file)))
 
     # Step4: estimate circRNA expression level
-    output_file, tmp = circ.proc(log_file, thread, circ_file, cand_reads, outdir, prefix, config)
+    output_file, tmp = circ.proc(log_file, thread, circ_file, hisat_bam, cand_reads, outdir, prefix, config)
     stat.update(tmp)
 
     stat_file = '{}/{}.stat'.format(outdir, prefix)
     with open(stat_file, 'w') as js:
         json.dump(stat, js)
+
     logger.info('Finished, see {} for circRNA expression profile'.format(output_file))
 
 

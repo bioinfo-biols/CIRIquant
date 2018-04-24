@@ -10,7 +10,6 @@ logger = logging.getLogger('CIRIquant')
 
 def align_genome(log_file, thread, reads, outdir, prefix, config):
     # mapping to reference genome
-    logger.info('Align reads to reference genome ..')
     align_dir = outdir + '/align'
     check_dir(align_dir)
     hisat_bam = '{}/{}.bam'.format(align_dir, prefix)
@@ -27,7 +26,6 @@ def align_genome(log_file, thread, reads, outdir, prefix, config):
 
     with open(log_file, 'a') as log:
         subprocess.call(hisat_cmd, shell=True, stderr=log)
-    logger.debug('HISAT2 bam: ' + hisat_bam)
     return hisat_bam
 
 
