@@ -82,7 +82,7 @@ class SamParser(object):
     def is_linear(self):
         if self.cigar == '*':
             return 0
-        elif self.__is_linear(self.cigar_stats[0]) and self.__is_linear(self.cigar_stats[-1]) and self.mapq >= 10:
+        elif self.__is_linear(self.cigar_stats[0]) and self.__is_linear(self.cigar_stats[-1]):
             return 1
         else:
             return 0
@@ -171,6 +171,8 @@ def proc_unmapped(infile, r1, r2):
 
     # Recover last read pair
     stat['cleaned_reads'] += 1
+    if len(read_pair) < 2:
+        return stat
     if not read_pair[0].flag_stats[2] and not read_pair[1].flag_stats[2]:
         stat['mapped_reads'] += 1
     if read_pair[0].is_linear and read_pair[1].is_linear and read_pair[0].strand != read_pair[1].strand:

@@ -55,8 +55,9 @@ def load_fai(infile):
     with open(infile, 'r') as f:
         for line in f:
             content = line.rstrip().split('\t')
-            chrom, length, start = content[:3]
-            faidx[chrom] = [int(start), int(length)]
+            chrom, length, start, eff_length, line_length = content
+            shift_length = int(length) * int(line_length) / int(eff_length)
+            faidx[chrom] = [int(start), shift_length]
     return faidx
 
 
@@ -158,7 +159,7 @@ def mapped_bsj_reads(log_file, denovo_bam, config, threshold=5):
         is_bsj = 0
 
         for i in parser.alignment:
-            if i[0] + threshold <= circ_end - circ_start <= i[1] - threshold:
+            if i[0] + threshold - 2 < circ_end - circ_start < i[1] - threshold + 3:
                 is_bsj = 1
         if is_bsj and parser.is_linear:
             stat['circular_reads'] += 1
@@ -238,6 +239,8 @@ def proc(log_file, thread, circ_file, hisat_bam, reads, outdir, prefix, config):
     coverage = {}
     bsj_reads, stat = mapped_bsj_reads(log_file, denovo_bam, config)
     for read_id in bsj_reads:
+        if len(bsj_reads[read_id]) < 2:
+            continue
         for pair, circ_id in bsj_reads[read_id].iteritems():
             circ_id = bsj_reads[read_id][pair]
             coverage[circ_id] = coverage.setdefault(circ_id, 0) + 1
