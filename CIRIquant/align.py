@@ -176,6 +176,8 @@ def proc_unmapped(infile, r1, r2):
     if not read_pair[0].flag_stats[2] and not read_pair[1].flag_stats[2]:
         stat['mapped_reads'] += 1
     if read_pair[0].is_linear and read_pair[1].is_linear and read_pair[0].strand != read_pair[1].strand:
+        pass
+    else:
         read1, read2 = read_pair[0], read_pair[1]
         read1_seq, read1_qual = read1.output()
         write_fastq(read1.prefix, read1_seq, read1_qual, r1)

@@ -113,7 +113,7 @@ def main():
     else:
         pipeline.gene_abundance(log_file, thread, outdir, prefix, hisat_bam, config)
 
-    # Step2: circRNA Prediction
+    # Step2: candidate reads
     if args.bam:
         logger.info('Candidate reads provided, skip scanning step ..')
         cand_reads = reads
@@ -137,8 +137,8 @@ def main():
     stat.update(tmp)
 
     stat_file = '{}/{}.stat'.format(outdir, prefix)
-    with open(stat_file, 'w') as js:
-        json.dump(stat, js)
+    with open(stat_file, 'w') as out:
+        json.dump(stat, out)
 
     logger.info('Finished, see {} for circRNA expression profile'.format(output_file))
 
