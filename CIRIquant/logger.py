@@ -21,7 +21,7 @@ def get_logger(logger_name='logger', fname=None, verbosity=False):
         fh = open(fname, 'w')
         fh.close()
         file_handler = logging.FileHandler(fname)
-        file_handler.setLevel(logging.DEBUG)
+        file_handler.setLevel(level)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 

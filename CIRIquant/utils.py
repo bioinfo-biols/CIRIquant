@@ -3,7 +3,7 @@
 import os
 import sys
 import logging
-logger = logging.getLogger('CIRIquant')
+LOGGER = logging.getLogger('CIRIquant')
 
 
 def subprocess_setup():
@@ -19,7 +19,7 @@ def get_thread_num(thread):
     from multiprocessing import cpu_count
     cores = cpu_count()
     workers = min(cores, int(thread))
-    logger.info('{} CPU cores availble, using {}'.format(cores, workers))
+    LOGGER.info('{} CPU cores availble, using {}'.format(cores, workers))
     return workers
 
 
@@ -42,13 +42,17 @@ def check_dir(dir_name):
 def check_config(config_file):
     import simplejson as json
     # check config reliability
-    logger.info('Loading config file: {}'.format(os.path.basename(config_file)))
+    LOGGER.info('Loading config file: {}'.format(os.path.basename(config_file)))
     config = {i: i for i in ['samtools', 'bwa', 'hisat2', 'stringtie']}
     with open(config_file, 'r') as infile:
         config.update(json.load(infile))
 
     # check required software version
     check_samtools_version(config['samtools'])
+    if 'genome' not in config:
+        sys.exit('Please provide reference genome')
+    if 'hisat_index' not in config:
+        sys.exit('Please provide HISAT2 index for reference genome')
     return config
 
 

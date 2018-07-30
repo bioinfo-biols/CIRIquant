@@ -5,7 +5,7 @@ import sys
 import logging
 import subprocess
 from utils import check_dir
-logger = logging.getLogger('CIRIquant')
+LOGGER = logging.getLogger('CIRIquant')
 
 
 def align_genome(log_file, thread, reads, outdir, prefix, config):
@@ -13,7 +13,7 @@ def align_genome(log_file, thread, reads, outdir, prefix, config):
     align_dir = outdir + '/align'
     check_dir(align_dir)
     hisat_bam = '{}/{}.bam'.format(align_dir, prefix)
-    hisat_cmd = '{} -p {} -q -x {} -1 {} -2 {} -t | {} view -bS > {}'.format(
+    hisat_cmd = '{} -p {} --dta -q -x {} -1 {} -2 {} -t | {} view -bS > {}'.format(
         config['hisat2'],
         thread,
         config['hisat_index'],
@@ -22,19 +22,8 @@ def align_genome(log_file, thread, reads, outdir, prefix, config):
         config['samtools'],
         hisat_bam
     )
-    logger.debug(hisat_cmd)
-
-    with open(log_file, 'a') as log:
-        subprocess.call(hisat_cmd, shell=True, stderr=log)
-    return hisat_bam
-
-
-def gene_abundance(log_file, thread, outdir, prefix, hisat_bam, config):
-    align_dir = outdir + '/align'
-    check_dir(align_dir)
 
     # sort hisat2 bam
-    logger.info('Sorting hisat2 bam ..')
     sorted_bam = '{}/{}.sorted.bam'.format(align_dir, prefix)
     sort_cmd = '{} sort --threads {} -o {} {}'.format(
         config['samtools'],
@@ -42,33 +31,58 @@ def gene_abundance(log_file, thread, outdir, prefix, hisat_bam, config):
         sorted_bam,
         hisat_bam,
     )
-    logger.debug(sort_cmd)
+
+    index_cmd = '{} index -@ {} {}'.format(
+        config['samtools'],
+        thread,
+        sorted_bam,
+    )
+
     with open(log_file, 'a') as log:
+        LOGGER.debug(hisat_cmd)
+        subprocess.call(hisat_cmd, shell=True, stderr=log)
+
+        LOGGER.debug(sort_cmd)
         subprocess.call(sort_cmd, shell=True, stderr=log)
 
+        LOGGER.debug(index_cmd)
+        subprocess.call(index_cmd, shell=True, stderr=log)
+
+    return sorted_bam
+
+
+def gene_abundance(log_file, thread, outdir, prefix, hisat_bam, config):
+    align_dir = outdir + '/align'
+    check_dir(align_dir)
+
     # estimate gene expression
-    logger.info('Estimate gene abundance ..')
+    LOGGER.info('Estimate gene abundance ..')
     gene_dir = '{}/gene'.format(outdir)
     check_dir(gene_dir)
+
+    stringtie_args = [hisat_bam, '-e', '-G ' + config['gtf'],]
     stringtie_cmd = '{0} {1} -e -G {2} -C {3}/{4}_cov.gtf -p {5} -o {3}/{4}_out.gtf -A {3}/{4}_genes.list'.format(
         config['stringtie'],
-        sorted_bam,
+        hisat_bam,
         config['gtf'],
         gene_dir,
         prefix,
         thread,
     )
-    logger.debug(stringtie_cmd)
+
     with open(log_file, 'a') as log:
+        LOGGER.debug(stringtie_cmd)
         subprocess.call(stringtie_cmd, shell=True, stderr=log)
-    logger.debug('Gene expression profile: {}/{}_genes.list'.format(gene_dir, prefix))
+
+    LOGGER.debug('Gene expression profile: {}/{}_genes.list'.format(gene_dir, prefix))
     return 1
 
 
 def run_bwa(log_file, thread, cand_reads, outdir, prefix, config):
-    logger.info('Running BWA-mem mapping candidate reads ..')
+    LOGGER.info('Running BWA-mem mapping candidate reads ..')
+    check_dir('{}/circ'.format(outdir))
+
     bwa_sam = '{}/circ/{}_unmapped.sam'.format(outdir, prefix)
-    logger.debug('BWA-mem sam: ' + bwa_sam)
 
     bwa_cmd = '{} mem -t {} -T 19 {} {} > {}'.format(
         config['bwa'],
@@ -77,14 +91,16 @@ def run_bwa(log_file, thread, cand_reads, outdir, prefix, config):
         ' '.join(cand_reads),
         bwa_sam,
     )
-    logger.debug(bwa_cmd)
+    LOGGER.debug(bwa_cmd)
     with open(log_file, 'a') as log:
         subprocess.call(bwa_cmd, shell=True, stderr=log, stdout=log)
+
+    LOGGER.debug('BWA-mem sam: ' + bwa_sam)
     return bwa_sam
 
 
 def run_ciri(log_file, thread, bwa_sam, outdir, prefix, config):
-    logger.info('Running CIRI2 for circRNA detection ..')
+    LOGGER.info('Running CIRI2 for circRNA detection ..')
     ciri_file = '{}/circ/{}.ciri'.format(outdir, prefix)
     ciri_cmd = 'CIRI2.pl -I {} -O {} -F {} -A {} -0 -T {} -G {}'.format(
         bwa_sam,
@@ -94,9 +110,11 @@ def run_ciri(log_file, thread, bwa_sam, outdir, prefix, config):
         thread,
         log_file,
     )
-    logger.debug(ciri_cmd)
+
     with open(log_file, 'a') as log:
+        LOGGER.debug(ciri_cmd)
         subprocess.call(ciri_cmd, shell=True, stderr=log, stdout=log)
+
     return ciri_file
 
 
@@ -107,5 +125,6 @@ def convert_bed(ciri_file):
         for line in f:
             content = line.rstrip().split('\t')
             chrom, start, end = content[1:4]
-            out.write('\t'.join([chrom, start, end]) + '\n')
+            strand = content[10]
+            out.write('\t'.join([chrom, start, end, '{}:{}|{}'.format(chrom, start, end), '.', strand]) + '\n')
     return out_file

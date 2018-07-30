@@ -4,11 +4,9 @@ import os
 import sys
 import re
 import argparse
-import simplejson as json
 
 
 def main():
-    import align
     import pipeline
     import circ
     from logger import get_logger
@@ -40,6 +38,10 @@ def main():
                         help='Output sample prefix (default: input sample name)', )
     parser.add_argument('-t', '--threads', dest='cpu_threads', default=4, metavar='INT',
                         help='Number of CPU threads', )
+    parser.add_argument('-a', '--anchor', dest='anchor', default=5, metavar='INT',
+                        help='Minimum anchor length for junction alignment', )
+    parser.add_argument('--RNaseR', dest='rnaser', metavar='FILE', default=None,
+                        help='bed file for putative circRNAs (optional)', )
 
     args = parser.parse_args()
 
@@ -49,31 +51,40 @@ def main():
     os.chmod(lib_path + '/CIRI2.pl', 0o755)
 
     # check input reads
+    # reads containing input mate pair
     if args.mate1 and args.mate2 and check_file(args.mate1) and check_file(args.mate2):
         reads = [os.path.abspath(args.mate1), os.path.abspath(args.mate2)]
     else:
         sys.exit('No input files specified')
 
-    # optional input
+    # optional input: user provided circRNA junction sites
     if args.circ and check_file(args.circ):
         circ_file = os.path.abspath(args.circ)
     else:
         circ_file = None
 
+    # optional input: user provided RNase R CIRIquant results
+    if args.rnaser and check_file(args.rnaser):
+        rnaser_file = os.path.abspath(args.rnaser)
+    else:
+        rnaser_file = None
+
+    # hisat2 alignment results
     if args.bam and check_file(args.bam):
-        hisat_bam = os.path.abspath(args.circ)
+        hisat_bam = os.path.abspath(args.bam)
     else:
         hisat_bam = None
 
-    # check output dir
+    # Output prefix
     if args.prefix is None:
         try:
             prefix = re.search(r'(\S+)[_/-][12]', os.path.basename(reads[0])).group(1)
         except AttributeError:
-            sys.exit('Ambiguous input file name, please manually select output prefix')
+            sys.exit('Ambiguous sample name, please manually select output prefix')
     else:
         prefix = args.prefix
 
+    # check output dir
     if args.output is None:
         outdir = os.path.abspath('./' + prefix)
     else:
@@ -96,8 +107,8 @@ def main():
 
     config = check_config(config_file)
     thread = get_thread_num(int(args.cpu_threads))
+    anchor = args.anchor
 
-    stat = {}
     # Step1: Data Preparation
     # Step1.1: HISAT2 mapping
     if hisat_bam is None:
@@ -113,34 +124,19 @@ def main():
     else:
         pipeline.gene_abundance(log_file, thread, outdir, prefix, hisat_bam, config)
 
-    # Step2: candidate reads
-    if args.bam:
-        logger.info('Candidate reads provided, skip scanning step ..')
-        cand_reads = reads
-    else:
-        logger.info('Extracting circular candidate reads ..')
-        cand_reads, tmp = align.unmapped_reads(log_file, thread, outdir, prefix, hisat_bam, config)
-        stat.update(tmp)
-    logger.debug('circRNA reads: ' + ','.join(cand_reads))
-
     # Step3: run CIRI2
     if circ_file is None:
-        logger.info('No circRNA information provided, run prediction step ..')
-        bwa_sam = pipeline.run_bwa(log_file, thread, cand_reads, outdir, prefix, config)
+        logger.info('No circRNA information provided, run CIRI2 for junction site prediction ..')
+        bwa_sam = pipeline.run_bwa(log_file, thread, reads, outdir, prefix, config)
         ciri_file = pipeline.run_ciri(log_file, thread, bwa_sam, outdir, prefix, config)
         circ_file = pipeline.convert_bed(ciri_file)
     else:
         logger.info('Using putative circRNA bed file: {}'.format(os.path.basename(circ_file)))
 
     # Step4: estimate circRNA expression level
-    output_file, tmp = circ.proc(log_file, thread, circ_file, hisat_bam, cand_reads, outdir, prefix, config)
-    stat.update(tmp)
-
-    stat_file = '{}/{}.stat'.format(outdir, prefix)
-    with open(stat_file, 'w') as out:
-        json.dump(stat, out)
-
-    logger.info('Finished, see {} for circRNA expression profile'.format(output_file))
+    out_file = circ.proc(log_file, thread, circ_file, hisat_bam, reads, outdir, prefix, anchor, config)
+    logger.info('circRNA Expression profile: {}'.format(os.path.basename(out_file)))
+    logger.info('Finished!')
 
 
 if __name__ == '__main__':
