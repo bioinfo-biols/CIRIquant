@@ -41,7 +41,7 @@ def main():
     parser.add_argument('-a', '--anchor', dest='anchor', default=5, metavar='INT',
                         help='Minimum anchor length for junction alignment', )
     parser.add_argument('--RNaseR', dest='rnaser', metavar='FILE', default=None,
-                        help='bed file for putative circRNAs (optional)', )
+                        help='CIRIquant result of RNase R data', )
 
     args = parser.parse_args()
 

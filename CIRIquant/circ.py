@@ -5,6 +5,7 @@ import sys
 import re
 import logging
 import pysam
+import time
 import subprocess
 import simplejson as json
 from multiprocessing import Pool
@@ -228,10 +229,16 @@ def denovo_alignment(log_file, thread, reads, outdir, prefix, config):
     )
 
     with open(log_file, 'a') as log:
+        LOGGER.debug(align_cmd)
         subprocess.call(align_cmd, shell=True, stderr=log, stdout=log)
-        subprocess.call(sort_cmd, shell=True, stderr=log, stdout=log)
-        subprocess.call(index_cmd, shell=True, stderr=log, stdout=log)
 
+        LOGGER.debug(sort_cmd)
+        subprocess.call(sort_cmd, shell=True, stderr=log, stdout=log)
+
+        LOGGER.debug(index_cmd)
+        subprocess.call(index_cmd, shell=True, stderr=log, stdout=log)
+    # wait for samtools index to correct time stamp
+    time.sleep(5)
     return sorted_bam
 
 
@@ -257,8 +264,8 @@ def proc_denovo_bam(bam_file, thread, threshold):
     """
 
     LOGGER.info('Detecting reads containing Back-splicing signals')
-    sam = pysam.AlignmentFile(bam_file, 'rb')
 
+    sam = pysam.AlignmentFile(bam_file, 'rb')
     header = sam.header['SQ']
     sam.close()
 
@@ -316,6 +323,7 @@ def denovo_worker(circ_chunk):
             if read.get_overlap(junc_site - THRESHOLD, junc_site + THRESHOLD) >= THRESHOLD * 2:
                 cand_reads.append((read.query_name, read.is_read1 - read.is_read2, circ_id))
     sam.close()
+
     return cand_reads
 
 
@@ -409,9 +417,7 @@ def genome_worker(chrom):
         # If Reads is bsj candidate
         if read.is_unmapped:
             continue
-        if read.query_name not in BSJ:
-            continue
-        if read.is_read1 - read.is_read2 not in BSJ[read.query_name]:
+        if read.query_name not in BSJ or read.is_read1 - read.is_read2 not in BSJ[read.query_name]:
             continue
         circ_id = BSJ[read.query_name][read.is_read1 - read.is_read2]
         # check alignment against refernce genome
@@ -529,6 +535,7 @@ def proc(log_file, thread, circ_file, hisat_bam, reads, outdir, prefix, anchor, 
     # hisat2 de novo alignment for candidate reads
     denovo_bam = denovo_alignment(log_file, thread, reads, outdir, prefix, config)
     LOGGER.debug('De-novo bam: {}'.format(denovo_bam))
+    # denovo_bam = '{}/circ/{}_denovo.sorted.bam'.format(outdir, prefix)
 
     # Find BSJ and FSJ informations
     cand_bsj = proc_denovo_bam(denovo_bam, thread, anchor)
