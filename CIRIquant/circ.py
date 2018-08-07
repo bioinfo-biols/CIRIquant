@@ -23,7 +23,7 @@ class BedParser(object):
 
 
     def __init__(self, content):
-        self.chr = content[0]
+        self.chrom = content[0]
         self.start = int(content[1])
         self.end = int(content[2])
         self.circ_id = content[3]
@@ -51,8 +51,44 @@ def load_bed(fname):
         for line in f:
             content = line.rstrip().split('\t')
             parser = BedParser(content)
-            circ_info[parser.chr][parser.circ_id] = parser
+            circ_info[parser.chrom][parser.circ_id] = parser
     return circ_info
+
+
+def update_info(circ_info, rnaser_file):
+    """
+    Add information of RNase R circRNAs
+    """
+    circ_exp = {}
+    LOGGER.info('RNase R file: {}'.format(rnaser_file))
+    with open(rnaser_file, 'r') as f:
+        header = {}
+        for line in f:
+            if line.startswith('##'):
+                key, value = line.strip('#').split(':')
+                header.update({key: value})
+                continue
+
+            content = line.rstrip().split('\t')
+            tmp_parser = GTFParser(content)
+            circ_exp[tmp_parser.attr['circ_id']] = {
+                'bsj': float(tmp_parser.attr['bsj']),
+                'fsj': float(tmp_parser.attr['fsj']),
+                'ratio': 2 * float(tmp_parser.attr['bsj']) / (2 * float(tmp_parser.attr['bsj']) + float(tmp_parser.attr['fsj']))
+            }
+            parser = BedParser([
+                tmp_parser.chrom,
+                tmp_parser.start,
+                tmp_parser.end,
+                tmp_parser.attr['circ_id'],
+                '.',
+                tmp_parser.strand,
+            ])
+            if parser.chrom in circ_info and parser.circ_id in circ_info[parser.chrom]:
+                continue
+            circ_info[parser.chrom].update({parser.circ_id: parser})
+
+    return circ_exp, (int(header['Total_Reads']), int(header['Mapped_Reads']), int(header['Circular_Reads']))
 
 
 def load_fai(fname):
@@ -507,7 +543,7 @@ def query_prefix(query_name):
     return prefix
 
 
-def proc(log_file, thread, circ_file, hisat_bam, reads, outdir, prefix, anchor, config):
+def proc(log_file, thread, circ_file, hisat_bam, rnaser_file, reads, outdir, prefix, anchor, config):
     """
     Build pseudo circular reference index and perform reads re-alignment
     Extract BSJ and FSJ reads from alignment results
@@ -524,6 +560,9 @@ def proc(log_file, thread, circ_file, hisat_bam, reads, outdir, prefix, anchor, 
 
     circ_fasta = '{}/circ/{}_index.fa'.format(outdir, prefix)
     circ_info = load_bed(circ_file)
+    if rnaser_file:
+        LOGGER.info('Loading RNase R results')
+        rnaser_exp, rnaser_stat = update_info(circ_info, rnaser_file)
 
     # extract fasta file for reads alignment
     generate_index(log_file, circ_info, config, circ_fasta)
@@ -535,27 +574,55 @@ def proc(log_file, thread, circ_file, hisat_bam, reads, outdir, prefix, anchor, 
     # hisat2 de novo alignment for candidate reads
     denovo_bam = denovo_alignment(log_file, thread, reads, outdir, prefix, config)
     LOGGER.debug('De-novo bam: {}'.format(denovo_bam))
-    # denovo_bam = '{}/circ/{}_denovo.sorted.bam'.format(outdir, prefix)
 
     # Find BSJ and FSJ informations
     cand_bsj = proc_denovo_bam(denovo_bam, thread, anchor)
     bsj_reads, fsj_reads = proc_genome_bam(hisat_bam, thread, circ_info, cand_bsj, anchor)
-    circ_list = bsj_reads.keys()
 
     total_reads, mapped_reads = bam_stat(hisat_bam)
     circ_reads = sum([len(bsj_reads[i]) for i in bsj_reads]) * 2
+    sample_stat = (total_reads, mapped_reads, circ_reads)
+
+    sample_exp = expression_level(circ_info, bsj_reads, fsj_reads)
 
     # circRNA annotation
-    gtf_info = index_annotation(config['gtf'])
 
-    stat_file = '{}/{}.stat'.format(outdir, prefix)
-    with open(stat_file, 'w') as out:
-        json.dump({'Total_Reads': total_reads, 'Mapped_Reads': mapped_reads, 'Circ_Reads': circ_reads}, out)
-
+    from version import __version__
+    header = [
+        'Sample: {}'.format(prefix),
+        'Total_Reads: {}'.format(total_reads),
+        'Mapped_Reads: {}'.format(mapped_reads),
+        'Circular_Reads: {}'.format(circ_reads),
+    ]
     out_file = '{}/{}.gtf'.format(outdir, prefix)
-    format_output(circ_info, bsj_reads, fsj_reads, gtf_info, circ_list, out_file)
+
+    import coeff
+    if rnaser_file:
+        tmp_header, circ_exp = coeff.correction(sample_exp, sample_stat, rnaser_exp, rnaser_stat)
+        header += tmp_header
+    else:
+        circ_exp = sample_exp
+
+    from version import __version__
+    header += ['version: {}'.format(__version__), ]
+    gtf_info = index_annotation(config['gtf'])
+    format_output(circ_info, circ_exp, sample_stat, header, gtf_info, out_file)
 
     return out_file
+
+
+def expression_level(circ_info, bsj_reads, fsj_reads):
+    LOGGER.info('Merge bsj and fsj results')
+    circ_exp = defaultdict(dict)
+    for chrom in circ_info:
+        for circ_id in circ_info[chrom]:
+            bsj = len(bsj_reads[circ_id]) if circ_id in bsj_reads else 0
+            fsj = len(fsj_reads[circ_id]) if circ_id in fsj_reads else 0
+            if bsj == 0 and fsj == 0:
+                continue
+            junc = 2.0 * bsj / (2.0 * bsj + fsj)
+            circ_exp[circ_id] = {'bsj': bsj, 'fsj': fsj, 'ratio': junc}
+    return circ_exp
 
 
 def bam_stat(bam_file):
@@ -590,56 +657,44 @@ def total_callback(read):
     return not read.is_supplementary and not read.is_secondary
 
 
-def format_output(circ_info, bsj_reads, fsj_reads, gtf_index, circ_list, outfile):
+def format_output(circ_info, circ_exp, sample_stat, header, gtf_index, outfile):
     """
     Output bsj information of circRNA expression levels
-
-    Parameters
-    -----
-    circ_info : dict
-        all circRNA informations, chrom -> circ_id -> BedParser
-    bsj_reads : dict
-        dict of bsj reads of circRNAs, circ_id -> query_name -> 1
-    fsj_reads : dict
-        dict of fsj reads of circRNAs, circ_id -> query_name -> 1
-    outfile : str
-        output file name
-
     """
     LOGGER.info('Output circRNA expression values')
 
     with open(outfile, 'w') as out:
+        for h in header:
+            out.write('##' + h + '\n')
         for chrom in sorted(circ_info.keys(), key=by_chrom):
             for circ_id in sorted(circ_info[chrom].keys(), cmp=by_circ, key=lambda x:circ_info[chrom][x]):
-                if circ_id not in circ_list:
+                if circ_id not in circ_exp or circ_exp[circ_id]['bsj'] == 0:
                     continue
                 parser = circ_info[chrom][circ_id]
-                tmp_line = [chrom, 'CIRIquant', circ_id, parser.start, parser.end, ]
-                bsj = len(bsj_reads[circ_id]) if circ_id in bsj_reads else 0
-                fsj = len(fsj_reads[circ_id]) if circ_id in fsj_reads else 0
-                # Junction ratio
-                try:
-                    junc = 2.0 * bsj / (2.0 * bsj + fsj)
-                except Exception as e:
-                    junc = 0.0
-
                 strand = parser.strand
                 tmp_line = [
                     chrom,
+                    'CIRIquant',
                     'circRNA',
-                    circ_id,
                     parser.start,
                     parser.end,
-                    bsj,
+                    '{:.4f}'.format(2 * 1000.0 * 1000.0 * circ_exp[circ_id]['bsj'] / sample_stat[1]),
                     strand,
                     '.',
                 ]
 
                 field = circRNA_attr(gtf_index, parser)
-                tmp_attr = 'bsj {:.1f}; fsj {:.1f}; junc_ratio {:.3f};'.format(bsj, fsj, junc)
-                for key in 'circ_type', 'gene_id', 'gene_name', 'gene_type':
-                    if key in field:
-                        tmp_attr += ' {} "{}";'.format(key, field[key])
+                tmp_attr = 'circ_id "{}"; circ_type "{}"; bsj {:.1f}; fsj {:.1f}; junc_ratio {:.3f};'.format(
+                    circ_id,
+                    field['circ_type'] if field else "Unknown",
+                    circ_exp[circ_id]['bsj'],
+                    circ_exp[circ_id]['fsj'],
+                    circ_exp[circ_id]['ratio'],
+                )
+                for key in 'gene_id', 'gene_name', 'gene_type':
+                    if key not in field:
+                        continue
+                    tmp_attr += ' {} "{}";'.format(key, field[key])
                 tmp_line.append(tmp_attr)
 
                 out.write('\t'.join([str(x) for x in tmp_line]) + '\n')
@@ -655,7 +710,7 @@ def by_chrom(x):
         chrom = chrom.strip('chr')
     try:
         chrom = int(chrom)
-    except Exception as e:
+    except ValueError as e:
         pass
     return chrom
 
@@ -667,7 +722,7 @@ def by_circ(x, y):
     return x.end - y.end if x.start == y.start else x.start - y.start
 
 
-class GeneParser(object):
+class GTFParser(object):
     """
     Class for parsing annotation gtf
     """
@@ -687,7 +742,7 @@ class GeneParser(object):
         Parsing attribute column in gtf file
         """
         field = {}
-        for key, value in [re.split('\s+', i.strip()) for i in self.attr_string.split(';') if i != '']:
+        for key, value in [re.split(r'\s+', i.strip()) for i in self.attr_string.split(';') if i != '']:
             field[key] = value.strip('"')
         return field
 
@@ -707,7 +762,7 @@ def index_annotation(gtf):
             # only include gene and exon feature for now
             if content[2] not in ['gene', 'exon']:
                 continue
-            parser = GeneParser(content)
+            parser = GTFParser(content)
             start_div, end_div = parser.start / 500, parser.end / 500
             for i in xrange(start_div, end_div + 1):
                 gtf_index[parser.chrom].setdefault(i, []).append(parser)
@@ -718,8 +773,9 @@ def circRNA_attr(gtf_index, circ):
     """
     annotate circRNA information
     """
-    if circ.chr not in gtf_index:
-        sys.exit('chrom of contig "{}" not in annotation gtf, please check'.format(circ.chrom))
+    if circ.chrom not in gtf_index:
+        LOGGER.warn('chrom of contig "{}" not in annotation gtf, please check'.format(circ.chrom))
+        return {}
     start_div, end_div = circ.start / 500, circ.end / 500
 
     host_gene = {}
@@ -728,10 +784,10 @@ def circRNA_attr(gtf_index, circ):
 
     single_gene = 1
     for x in xrange(start_div, end_div + 1):
-        if x not in gtf_index[circ.chr]:
+        if x not in gtf_index[circ.chrom]:
             single_gene = 0
             continue
-        for element in gtf_index[circ.chr][x]:
+        for element in gtf_index[circ.chrom][x]:
             # start site
             if element.start <= circ.start <= element.end and element.strand == circ.strand:
                 start_element[element.type].append(element)
@@ -777,17 +833,14 @@ def circRNA_attr(gtf_index, circ):
     else:
         field['circ_type'] = 'intergenic'
 
-    # gene_id
-    # gene_name
-    # gene_type / gene_biotype
-
+    # gene_id, gene_name, gene_type / gene_biotype
     if len(forward_host_gene) == 1:
         field.update({
             'gene_id': forward_host_gene[0].attr['gene_id'],
             'gene_name': forward_host_gene[0].attr['gene_name'],
             'gene_type': forward_host_gene[0].attr['gene_type'] if 'gene_type' in forward_host_gene[0].attr else forward_host_gene[0].attr['gene_biotype'],
         })
-    else:
+    elif forward_host_gene:
         tmp_gene_id = []
         tmp_gene_name = []
         tmp_gene_type = []
@@ -800,4 +853,7 @@ def circRNA_attr(gtf_index, circ):
             'gene_name': ','.join(tmp_gene_name),
             'gene_type': ','.join(tmp_gene_type),
         })
+    else:
+        pass
+
     return field

@@ -7,8 +7,8 @@ import argparse
 
 
 def main():
-    import pipeline
     import circ
+    import pipeline
     from logger import get_logger
     from utils import check_file, check_dir, check_config, get_thread_num
 
@@ -41,7 +41,7 @@ def main():
     parser.add_argument('-a', '--anchor', dest='anchor', default=5, metavar='INT',
                         help='Minimum anchor length for junction alignment', )
     parser.add_argument('--RNaseR', dest='rnaser', metavar='FILE', default=None,
-                        help='CIRIquant result of RNase R data', )
+                        help='CIRIquant result of RNase R sample', )
 
     args = parser.parse_args()
 
@@ -134,7 +134,8 @@ def main():
         logger.info('Using putative circRNA bed file: {}'.format(os.path.basename(circ_file)))
 
     # Step4: estimate circRNA expression level
-    out_file = circ.proc(log_file, thread, circ_file, hisat_bam, reads, outdir, prefix, anchor, config)
+    out_file = circ.proc(log_file, thread, circ_file, hisat_bam, rnaser_file, reads, outdir, prefix, anchor, config)
+
     logger.info('circRNA Expression profile: {}'.format(os.path.basename(out_file)))
     logger.info('Finished!')
 

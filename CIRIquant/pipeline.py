@@ -60,7 +60,6 @@ def gene_abundance(log_file, thread, outdir, prefix, hisat_bam, config):
     gene_dir = '{}/gene'.format(outdir)
     check_dir(gene_dir)
 
-    stringtie_args = [hisat_bam, '-e', '-G ' + config['gtf'],]
     stringtie_cmd = '{0} {1} -e -G {2} -C {3}/{4}_cov.gtf -p {5} -o {3}/{4}_out.gtf -A {3}/{4}_genes.list'.format(
         config['stringtie'],
         hisat_bam,
