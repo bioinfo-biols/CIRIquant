@@ -15,7 +15,7 @@ Maintainer: Jinyang Zhang
 
 ### License ###
 
-The code is released under the MIT License. See the `LICENSE` for more detail.
+The code is released under the MIT License. See the `LICENSE` file for more detail.
 
 ### Prerequisites ###
 
@@ -27,10 +27,12 @@ Softwares:
     samtools=1.5
 
 Python packages:
-    numpy
     simplejson
-    pysam
     argparse
+    pysam
+    numpy
+    scipy
+    scikit-learn
 
 R packages:
     optparse
@@ -40,17 +42,11 @@ R packages:
 
 **NOTE**:
 
-Samtools version should be higher than `1.3.1`, as different version of samtools may use different parameters in `sort` and other commands
-
-The required python packages are listed in `requirements.txt`, and will be automatically installed, you can use `pip` for manual installation
-
-```bash
-pip install -r requirements.txt
-```
+Samtools version should be higher than `1.3.1`, as older version of samtools may use deprecated parameters in `sort` and other commands
 
 ### 1. Installation ###
 
-Use the setup.py for CIRIquant installation (clean install under virutalenv is recommended).
+Use the setup.py for CIRIquant installation (clean install under virutalenv is highly recommended).
 
 ```bash
 # create and activate virtual env
@@ -61,6 +57,9 @@ source ./venv/bin/activate
 git clone https://kevinzjy.github.com/CIRIquant2
 cd CIRIquant2
 python setup.py install
+
+# Manual installation of required pacakges is also supported
+pip install -r requirements.txt
 ```
 
 ### 2. Running CIRIquant For circRNA quantifcation ###
@@ -83,13 +82,14 @@ Options (defaults in parentheses):
   -o, -out          Output directory (default: current directory)
   -p, --prefix      Output sample prefix (default: input sample name)
   -t, --threads     Number of CPU threads to use (defualt: 4)
-  --RNaseR          Run RNase R correction
+  --RNaseR          CIRIquant output file of RNase R data (required for RNase R correction)
 
 ```
 
-A JSON-formated config file is needed for CIRIquant to find reference genome and their hisat2 index etc. A valid format of config file is demonstrate below.
+A JSON-formated config file is needed for CIRIquant to find software and reference needed. A valid example of config file is demonstrated below.
 
 ```json
+// Example of config file
 {
     "bwa": "bwa",
     "hisat2": "hisat2",
@@ -108,24 +108,47 @@ bwa | the command of `bwa`, (default: bwa)
 hisat2 | command of `hisat2`, (default: hisat2)
 stringtie | command of `stringite`, (default: stringtie)
 samtools | command of `samtools`, (default: samtools), samtools version below 1.3.1 is not supported
+genome | reference genome fasta, a fai index by `samtools faidx` is also needed under the same directory
+gtf | annotation file of reference genome
+bwa_index | index of reference genome using `bwa index -w bwtsw`
+hisat_index | index of reference genome using `hisat2-build`
 
-For user-provided circRNA junction sites, a circRNA list in bed format is needed
+For quantification of user-provided circRNAs, a list of junction sites in bed format is required
 
 ```
-chr1    10000   10099   chr1:10000-10099    0   +
-chr1    31000   31200   chr1:31000-31200    0   -
+chr1    10000   10099   chr1:10000|10099    .   +
+chr1    31000   31200   chr1:31000|31200    .   -
 ```
 
 
 ### 3. Output format of CIRIquant ###
 
-The output of CIRIquant is in bed format, containing information of BSJ and FSJ reads of circRNAs
+The output of CIRIquant is in standard gtf format, containing information of BSJ and FSJ reads of circRNAs and annotation of circRNA back-spliced regions in the attribute columns
 
 | column | name | description |
 |--------|------|-------------|
 | 1 | chrom | chromosome / contig name |
-| 2 | start | 5' back-spliced junction site |
-| 3 | end | 3' back-spliced junction site |
+| 2 | source | CIRIquant |
+| 3 | type | circRNA
+| 4 | start | 5' back-spliced junction site |
+| 5 | end | 3' back-spliced junction site |
+| 6 | score | CPM of circRNAs (#BSJ / #Mapped reads)
+| 7 | strand | strand information
+| 8 | . | .
+| 9 | attributes | attributes seperated by semicolon |
+
+The attributes containing several pre-defined keys and values:
+
+| key | description|
+| --- | -----------|
+| circ_id | name of circRNA |
+| circ_type | circRNA types: exon / intron / intergenic |
+| bsj | number of bsj reads |
+| fsj | number of fsj reads |
+| junc_ratio | circular to linear ratio: 2 * bsj / ( 2 * bsj + fsj)
+| gene_id | ensemble id of host gene |
+| gene_name | HGNC symbol of host gene |
+| gene_type | type of host gene in gtf file |
 
 ### 4. Example Usage ###
 
@@ -141,7 +164,7 @@ CIRIquant2 --config human.config \
     -t 4
 ```
 
-The output result should locate under `test_data/test_output/test.CIRI2_info.list`
+The output file `test.gtf` should be located under `test_data/test_output/`
 
 
 ### 5. Generate RNase R effect corrected BSJ information ###
@@ -149,15 +172,9 @@ The output result should locate under `test_data/test_output/test.CIRI2_info.lis
 In order to remove effect for RNase R treatment, two steps of programs are needed
 
 1. Run CIRIquant with RNase R treated sample
-2. Use output in Step1 and run CIRIquant with `--RNaseR` option using Total RNA data
+2. Use output in Step1 and run CIRIquant with `--RNaseR` option using output gtf in previous step
 
-The output should be in the same bed format, and BSJ should be the corrected expression value for circRNAs
-
-| column | name | description |
-|--------|------|-------------|
-| 1 | chrom | chromosome / contig name |
-| 2 | start | 5' back-spliced junction site |
-| 3 | end | 3' back-spliced junction site |
+The output is in the same format as normal run, however the header line is appended with additional information
 
 ### 6. Run differential expression analysis for circRNAs
 
