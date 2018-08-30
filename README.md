@@ -121,10 +121,11 @@ chr1    31000   31200   chr1:31000|31200    .   -
 ```
 
 
-### 3. Output format of CIRIquant ###
+### 3. Output files ###
 
-The output of CIRIquant is in standard gtf format, containing information of BSJ and FSJ reads of circRNAs and annotation of circRNA back-spliced regions in the attribute columns
+The main output of CIRIquant is a GTF file, that contains detailed information of BSJ and FSJ reads of circRNAs and annotation of circRNA back-spliced regions in the attribute columns
 
+Description of each columns's value
 | column | name | description |
 |--------|------|-------------|
 | 1 | chrom | chromosome / contig name |
@@ -205,20 +206,20 @@ The output format of sample without replicate is in the format below:
 
 #### Group of samples ####
 
-For group of samples, a list of sample IDS and their respective path should be provided
+For group of samples, a tab-seperated list of sample IDS and path to CIRIquant output directory should be specificed respectively
 
 **NOTE**: Gene abundance are used for normalization analysis, so all samples should run without `--no-gene` option provided
 
 ```
-CONTROL1    N   <PATH_TO_CONTROL1.bed>
-CONTROL2    N   <PATH_TO_CONTROL2.bed>
-CONTROL3    N   <PATH_TO_CONTROL3.bed>
-CASE1    T   <PATH_TO_CASE1.bed>
-CASE2    T   <PATH_TO_CASE2.bed>
-CASE3    T   <PATH_TO_CASE3.bed>
+CONTROL1    N   <PATH_TO_CONTROL1_DIR>
+CONTROL2    N   <PATH_TO_CONTROL2_DIR>
+CONTROL3    N   <PATH_TO_CONTROL3_DIR>
+CASE1    T   <PATH_TO_CASE1_DIR>
+CASE2    T   <PATH_TO_CASE2_DIR>
+CASE3    T   <PATH_TO_CASE3_DIR>
 ```
 
-The output in the same format as edgeR output
+| The output in the same format as edgeR output
 | column | name | description |
 |--------|------|-------------|
 | 1 | chrom | chromosome / contig name |

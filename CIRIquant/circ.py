@@ -639,7 +639,12 @@ def bam_stat(bam_file):
     """
     sam = pysam.AlignmentFile(bam_file, 'rb')
     total = sam.count(read_callback=total_callback, until_eof=True)
-    unmapped = sam.count(read_callback=unmapped_callback)
+    sam.close()
+
+    sam = pysam.AlignmentFile(bam_file, 'rb')
+    unmapped = sam.count(read_callback=unmapped_callback, until_eof=True)
+    sam.close()
+
     return total, total - unmapped
 
 
