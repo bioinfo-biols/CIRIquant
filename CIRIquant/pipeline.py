@@ -4,66 +4,66 @@ import os
 import sys
 import logging
 import subprocess
-from utils import check_dir
+import utils
 LOGGER = logging.getLogger('CIRIquant')
 
 
-def align_genome(log_file, thread, reads, outdir, prefix, config):
+def align_genome(log_file, thread, reads, outdir, prefix):
     # mapping to reference genome
     align_dir = outdir + '/align'
-    check_dir(align_dir)
+    utils.check_dir(align_dir)
     hisat_bam = '{}/{}.bam'.format(align_dir, prefix)
     hisat_cmd = '{} -p {} --dta -q -x {} -1 {} -2 {} -t | {} view -bS > {}'.format(
-        config['hisat2'],
+        utils.HISAT2,
         thread,
-        config['hisat_index'],
+        utils.HISAT_INDEX,
         reads[0],
         reads[1],
-        config['samtools'],
+        utils.SAMTOOLS,
         hisat_bam
     )
 
     # sort hisat2 bam
     sorted_bam = '{}/{}.sorted.bam'.format(align_dir, prefix)
     sort_cmd = '{} sort --threads {} -o {} {}'.format(
-        config['samtools'],
+        utils.SAMTOOLS,
         thread,
         sorted_bam,
         hisat_bam,
     )
 
     index_cmd = '{} index -@ {} {}'.format(
-        config['samtools'],
+        utils.SAMTOOLS,
         thread,
         sorted_bam,
     )
 
     with open(log_file, 'a') as log:
         LOGGER.debug(hisat_cmd)
-        subprocess.call(hisat_cmd, shell=True, stderr=log)
+        # subprocess.call(hisat_cmd, shell=True, stderr=log)
 
         LOGGER.debug(sort_cmd)
-        subprocess.call(sort_cmd, shell=True, stderr=log)
+        # subprocess.call(sort_cmd, shell=True, stderr=log)
 
         LOGGER.debug(index_cmd)
-        subprocess.call(index_cmd, shell=True, stderr=log)
+        # subprocess.call(index_cmd, shell=True, stderr=log)
 
     return sorted_bam
 
 
-def gene_abundance(log_file, thread, outdir, prefix, hisat_bam, config):
+def gene_abundance(log_file, thread, outdir, prefix, hisat_bam):
     align_dir = outdir + '/align'
-    check_dir(align_dir)
+    utils.check_dir(align_dir)
 
     # estimate gene expression
     LOGGER.info('Estimate gene abundance ..')
     gene_dir = '{}/gene'.format(outdir)
-    check_dir(gene_dir)
+    utils.check_dir(gene_dir)
 
     stringtie_cmd = '{0} {1} -e -G {2} -C {3}/{4}_cov.gtf -p {5} -o {3}/{4}_out.gtf -A {3}/{4}_genes.list'.format(
-        config['stringtie'],
+        utils.STRINGTIE,
         hisat_bam,
-        config['gtf'],
+        utils.GTF,
         gene_dir,
         prefix,
         thread,
@@ -71,48 +71,50 @@ def gene_abundance(log_file, thread, outdir, prefix, hisat_bam, config):
 
     with open(log_file, 'a') as log:
         LOGGER.debug(stringtie_cmd)
-        subprocess.call(stringtie_cmd, shell=True, stderr=log)
+        # subprocess.call(stringtie_cmd, shell=True, stderr=log)
+        pass
 
     LOGGER.debug('Gene expression profile: {}/{}_genes.list'.format(gene_dir, prefix))
     return 1
 
 
-def run_bwa(log_file, thread, cand_reads, outdir, prefix, config):
+def run_bwa(log_file, thread, cand_reads, outdir, prefix):
     LOGGER.info('Running BWA-mem mapping candidate reads ..')
-    check_dir('{}/circ'.format(outdir))
+    utils.check_dir('{}/circ'.format(outdir))
 
     bwa_sam = '{}/circ/{}_unmapped.sam'.format(outdir, prefix)
 
     bwa_cmd = '{} mem -t {} -T 19 {} {} > {}'.format(
-        config['bwa'],
+        utils.BWA,
         thread,
-        config['bwa_index'],
+        utils.BWA_INDEX,
         ' '.join(cand_reads),
         bwa_sam,
     )
     LOGGER.debug(bwa_cmd)
     with open(log_file, 'a') as log:
-        subprocess.call(bwa_cmd, shell=True, stderr=log, stdout=log)
+        LOGGER.debug(bwa_cmd)
+        # subprocess.call(bwa_cmd, shell=True, stderr=log, stdout=log)
 
     LOGGER.debug('BWA-mem sam: ' + bwa_sam)
     return bwa_sam
 
 
-def run_ciri(log_file, thread, bwa_sam, outdir, prefix, config):
+def run_ciri(log_file, thread, bwa_sam, outdir, prefix):
     LOGGER.info('Running CIRI2 for circRNA detection ..')
     ciri_file = '{}/circ/{}.ciri'.format(outdir, prefix)
     ciri_cmd = 'CIRI2.pl -I {} -O {} -F {} -A {} -0 -T {} -G {}'.format(
         bwa_sam,
         ciri_file,
-        config['genome'],
-        config['gtf'],
+        utils.FASTA,
+        utils.GTF,
         thread,
         log_file,
     )
 
     with open(log_file, 'a') as log:
         LOGGER.debug(ciri_cmd)
-        subprocess.call(ciri_cmd, shell=True, stderr=log, stdout=log)
+        # subprocess.call(ciri_cmd, shell=True, stderr=log, stdout=log)
 
     return ciri_file
 

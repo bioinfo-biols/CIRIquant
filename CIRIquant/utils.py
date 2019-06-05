@@ -5,6 +5,16 @@ import sys
 import logging
 LOGGER = logging.getLogger('CIRIquant')
 
+BWA = None
+HISAT2 = None
+STRINGTIE = None
+SAMTOOLS = None
+
+FASTA = None
+GTF = None
+BWA_INDEX = None
+HISAT_INDEX = None
+
 
 def subprocess_setup():
     """
@@ -40,20 +50,34 @@ def check_dir(dir_name):
 
 
 def check_config(config_file):
-    import simplejson as json
+    import yaml
+    global BWA, HISAT2, STRINGTIE, SAMTOOLS
+    global FASTA, GTF, BWA_INDEX, HISAT_INDEX
+
     # check config reliability
     LOGGER.info('Loading config file: {}'.format(os.path.basename(config_file)))
-    config = {i: i for i in ['samtools', 'bwa', 'hisat2', 'stringtie']}
     with open(config_file, 'r') as infile:
-        config.update(json.load(infile))
+        config = yaml.load(infile, Loader=yaml.BaseLoader)
+
+    # check all tools
+    if 'tools' not in config:
+        sys.exit('Path of required software must be provided!')
+
+    for i in 'bwa', 'hisat2', 'stringtie', 'samtools':
+        if i not in config['tools']:
+            sys.exit('Tool: {} need to be specificed'.format(i))
+        globals()[i.upper()] = config['tools'][i]
 
     # check required software version
-    check_samtools_version(config['samtools'])
-    if 'genome' not in config:
-        sys.exit('Please provide reference genome')
-    if 'hisat_index' not in config:
-        sys.exit('Please provide HISAT2 index for reference genome')
-    return config
+    check_samtools_version(config['tools']['samtools'])
+
+    # check reference and index
+    for i in 'fasta', 'gtf', 'bwa_index', 'hisat_index':
+        if i not in config['reference']:
+            sys.exit('Reference {} need to be specificed'.format(i))
+        globals()[i.upper()] = config['reference'][i]
+
+    return config['name']
 
 
 def check_samtools_version(samtools):

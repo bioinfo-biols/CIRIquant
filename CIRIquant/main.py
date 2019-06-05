@@ -98,14 +98,16 @@ def main():
 
     if args.config_file and check_file(args.config_file):
         config_file = os.path.abspath(args.config_file)
+    else:
+        sys.exit('A config file is needed, please see manual for detailed information.')
+    config = check_config(config_file)
 
     # Start Running
     os.chdir(outdir)
     logger.info('Input reads: ' + ','.join([os.path.basename(args.mate1), os.path.basename(args.mate2)]))
-    logger.info('Output directory: ' + outdir)
-    logger.info('Sample prefix: ' + prefix)
+    logger.info('Output directory: {}, Output prefix: {}'.format(outdir, prefix))
+    logger.info('Config: {} Loaded'.format(config))
 
-    config = check_config(config_file)
     thread = get_thread_num(int(args.cpu_threads))
     anchor = args.anchor
 
@@ -113,7 +115,7 @@ def main():
     # Step1.1: HISAT2 mapping
     if hisat_bam is None:
         logger.info('Align RNA-seq reads to reference genome ..')
-        hisat_bam = pipeline.align_genome(log_file, thread, reads, outdir, prefix, config)
+        hisat_bam = pipeline.align_genome(log_file, thread, reads, outdir, prefix)
     else:
         logger.info('HISAT2 alignment bam provided, skipping alignment step ..')
     logger.debug('HISAT2 bam: {}'.format(os.path.basename(hisat_bam)))
@@ -122,19 +124,19 @@ def main():
     if args.gene_exp:
         logger.info('Skipping gene abundance estimation')
     else:
-        pipeline.gene_abundance(log_file, thread, outdir, prefix, hisat_bam, config)
+        pipeline.gene_abundance(log_file, thread, outdir, prefix, hisat_bam)
 
     # Step3: run CIRI2
     if circ_file is None:
         logger.info('No circRNA information provided, run CIRI2 for junction site prediction ..')
-        bwa_sam = pipeline.run_bwa(log_file, thread, reads, outdir, prefix, config)
-        ciri_file = pipeline.run_ciri(log_file, thread, bwa_sam, outdir, prefix, config)
+        bwa_sam = pipeline.run_bwa(log_file, thread, reads, outdir, prefix)
+        ciri_file = pipeline.run_ciri(log_file, thread, bwa_sam, outdir, prefix)
         circ_file = pipeline.convert_bed(ciri_file)
     else:
         logger.info('Using putative circRNA bed file: {}'.format(os.path.basename(circ_file)))
 
     # Step4: estimate circRNA expression level
-    out_file = circ.proc(log_file, thread, circ_file, hisat_bam, rnaser_file, reads, outdir, prefix, anchor, config)
+    out_file = circ.proc(log_file, thread, circ_file, hisat_bam, rnaser_file, reads, outdir, prefix, anchor)
 
     logger.info('circRNA Expression profile: {}'.format(os.path.basename(out_file)))
     logger.info('Finished!')

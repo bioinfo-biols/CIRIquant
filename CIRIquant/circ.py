@@ -7,10 +7,12 @@ import logging
 import pysam
 import time
 import subprocess
-import simplejson as json
+
 from multiprocessing import Pool
 from collections import defaultdict
 from itertools import izip_longest
+
+import utils
 
 LOGGER = logging.getLogger('CIRIquant')
 PREFIX = re.compile(r'(.+)[/_-][12]')
@@ -142,7 +144,7 @@ def extract_seq(fasta, start, length):
     return seq
 
 
-def generate_index(log_file, circ_info, config, circ_fasta):
+def generate_index(log_file, circ_info, circ_fasta):
     """
     Generate pseudo circular index
 
@@ -152,8 +154,6 @@ def generate_index(log_file, circ_info, config, circ_fasta):
         file name of log file, used for subprocess.PIPE
     circ_info : dict
         back-spliced junction sites
-    config : dict
-        config informations
     circ_fasta :
         output fasta file name
 
@@ -166,10 +166,10 @@ def generate_index(log_file, circ_info, config, circ_fasta):
 
     from logger import ProgressBar
 
-    fai = config['genome'] + '.fai'
+    fai = utils.FASTA + '.fai'
     if not os.path.exists(fai):
         LOGGER.debug('Indexing FASTA')
-        index_cmd = '{} faidx {}'.format(config['samtools'], config['genome'])
+        index_cmd = '{} faidx {}'.format(utils.SAMTOOLS, utils.FASTA)
         with open(log_file, 'a') as log:
             subprocess.call(index_cmd, shell=True, stderr=log, stdout=log)
     fasta_index = load_fai(fai)
@@ -185,7 +185,7 @@ def generate_index(log_file, circ_info, config, circ_fasta):
             if chrom not in fasta_index:
                 sys.exit('Unconsistent chromosome id: {}'.format(chrom))
             chrom_start, chrom_length = fasta_index[chrom]
-            chrom_seq = extract_seq(config['genome'], chrom_start, chrom_length)
+            chrom_seq = extract_seq(utils.FASTA, chrom_start, chrom_length)
 
             chrom_circ = circ_info[chrom]
             for circ_id in chrom_circ:
@@ -200,7 +200,7 @@ def generate_index(log_file, circ_info, config, circ_fasta):
     return fasta_index
 
 
-def build_index(log_file, thread, pseudo_fasta, outdir, prefix, config):
+def build_index(log_file, thread, pseudo_fasta, outdir, prefix):
     """
     Build hisat2 index for pseudo circular index
 
@@ -214,7 +214,7 @@ def build_index(log_file, thread, pseudo_fasta, outdir, prefix, config):
     denovo_index = '{}/circ/{}_index'.format(outdir, prefix)
 
     build_cmd = '{}-build -p {} -f {} {}'.format(
-        config['hisat2'],
+        utils.HISAT2,
         thread,
         pseudo_fasta,
         denovo_index
@@ -226,7 +226,7 @@ def build_index(log_file, thread, pseudo_fasta, outdir, prefix, config):
     return denovo_index
 
 
-def denovo_alignment(log_file, thread, reads, outdir, prefix, config):
+def denovo_alignment(log_file, thread, reads, outdir, prefix):
     """
     Call hisat2 to read re-alignment
 
@@ -241,25 +241,25 @@ def denovo_alignment(log_file, thread, reads, outdir, prefix, config):
     sorted_bam = '{}/circ/{}_denovo.sorted.bam'.format(outdir, prefix)
 
     align_cmd = '{} -p {} --dta -q -x {}/circ/{}_index -1 {} -2 {} | {} view -bS > {}'.format(
-        config['hisat2'],
+        utils.HISAT2,
         thread,
         outdir,
         prefix,
         reads[0],
         reads[1],
-        config['samtools'],
+        utils.SAMTOOLS,
         denovo_bam,
     )
 
     sort_cmd = '{} sort --threads {} -o {} {}'.format(
-        config['samtools'],
+        utils.SAMTOOLS,
         thread,
         sorted_bam,
         denovo_bam,
     )
 
     index_cmd = '{} index -@ {} {}'.format(
-        config['samtools'],
+        utils.SAMTOOLS,
         thread,
         sorted_bam,
     )
@@ -543,7 +543,7 @@ def query_prefix(query_name):
     return prefix
 
 
-def proc(log_file, thread, circ_file, hisat_bam, rnaser_file, reads, outdir, prefix, anchor, config):
+def proc(log_file, thread, circ_file, hisat_bam, rnaser_file, reads, outdir, prefix, anchor):
     """
     Build pseudo circular reference index and perform reads re-alignment
     Extract BSJ and FSJ reads from alignment results
@@ -565,14 +565,14 @@ def proc(log_file, thread, circ_file, hisat_bam, rnaser_file, reads, outdir, pre
         rnaser_exp, rnaser_stat = update_info(circ_info, rnaser_file)
 
     # extract fasta file for reads alignment
-    generate_index(log_file, circ_info, config, circ_fasta)
+    generate_index(log_file, circ_info, circ_fasta)
 
     # hisat2-build index
-    denovo_index = build_index(log_file, thread, circ_fasta, outdir, prefix, config)
+    denovo_index = build_index(log_file, thread, circ_fasta, outdir, prefix)
     LOGGER.debug('De-novo index: {}'.format(denovo_index))
 
     # hisat2 de novo alignment for candidate reads
-    denovo_bam = denovo_alignment(log_file, thread, reads, outdir, prefix, config)
+    denovo_bam = denovo_alignment(log_file, thread, reads, outdir, prefix)
     LOGGER.debug('De-novo bam: {}'.format(denovo_bam))
 
     # Find BSJ and FSJ informations
@@ -605,7 +605,7 @@ def proc(log_file, thread, circ_file, hisat_bam, rnaser_file, reads, outdir, pre
 
     from version import __version__
     header += ['version: {}'.format(__version__), ]
-    gtf_info = index_annotation(config['gtf'])
+    gtf_info = index_annotation(utils.GTF)
     format_output(circ_info, circ_exp, sample_stat, header, gtf_info, out_file)
 
     return out_file

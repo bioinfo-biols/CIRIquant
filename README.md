@@ -10,6 +10,7 @@ Maintainer: Jinyang Zhang
 
 ### Release Notes ###
 
+- Version 1.2: provide YAML config file
 - Version 1.1: add help
 - Version 1.0: add implementation of pysam
 
@@ -21,13 +22,13 @@ The code is released under the MIT License. See the `LICENSE` file for more deta
 
 ```
 Softwares:
-    bwa=0.7.12
-    hisat2=2.1.0
-    stringtie=1.3.3b
-    samtools=1.5
+    bwa
+    hisat2
+    stringtie
+    samtools>=1.3.1
 
 Python packages:
-    simplejson
+    PyYAML
     argparse
     pysam
     numpy
@@ -86,20 +87,23 @@ Options (defaults in parentheses):
 
 ```
 
-A JSON-formated config file is needed for CIRIquant to find software and reference needed. A valid example of config file is demonstrated below.
+A YAML-formated config file is needed for CIRIquant to find software and reference needed. A valid example of config file is demonstrated below.
 
-```json
+```YAML
 // Example of config file
-{
-    "bwa": "bwa",
-    "hisat2": "hisat2",
-    "stringtie": "stringtie",
-    "samtools": "samtools",
-    "genome": "/histor/zhao/zhangjy/database/gencode_hg19/hg19.fa",
-    "gtf": "/histor/zhao/zhangjy/database/gencode_hg19/gencode.v19.annotation.gtf",
-    "bwa_index": "/histor/zhao/zhangjy/database/gencode_hg19/_BWAtmp/hg19",
-    "hisat_index": "/histor/zhao/zhangjy/database/gencode_hg19/_HISATtmp/hg19"
-}
+name: hg19
+tools:
+  bwa: bwa
+  hisat2: hisat2
+  stringtie: stringtie
+  samtools: samtools
+
+reference:
+  fasta: /home/zhangjy/Data/database/hg19.fa
+  gtf: /home/zhangjy/Data/database/gencode.v19.annotation.gtf
+  bwa_index: /home/zhangjy/Data/database/hg19/_BWAtmp/hg19
+  hisat_index: /home/zhangjy/Data/database/hg19/_HISATtmp/hg19
+
 ```
 
 Key | Description
@@ -126,6 +130,7 @@ chr1    31000   31200   chr1:31000|31200    .   -
 The main output of CIRIquant is a GTF file, that contains detailed information of BSJ and FSJ reads of circRNAs and annotation of circRNA back-spliced regions in the attribute columns
 
 Description of each columns's value
+
 | column | name | description |
 |--------|------|-------------|
 | 1 | chrom | chromosome / contig name |
@@ -219,7 +224,8 @@ CASE2    T   <PATH_TO_CASE2_DIR>
 CASE3    T   <PATH_TO_CASE3_DIR>
 ```
 
-| The output in the same format as edgeR output
+The output in the same format as edgeR output
+
 | column | name | description |
 |--------|------|-------------|
 | 1 | chrom | chromosome / contig name |
