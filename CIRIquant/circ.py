@@ -23,7 +23,6 @@ class BedParser(object):
     Class for parsing circRNA information in bed file
     """
 
-
     def __init__(self, content):
         self.chrom = content[0]
         self.start = int(content[1])
@@ -324,6 +323,8 @@ def proc_denovo_bam(bam_file, thread, threshold):
 
 BAM = None
 THRESHOLD = None
+
+
 def denovo_initializer(infile, threshold):
     """
     Initializer for passing bam file name
@@ -417,6 +418,8 @@ def proc_genome_bam(bam_file, thread, circ_info, cand_reads, threshold):
 
 CIRC = None
 BSJ = None
+
+
 def genome_initializer(bam_file, circ_info, cand_bsj, threshold):
     """
     Initializer for passing bam file name and circRNA_info
@@ -586,8 +589,6 @@ def proc(log_file, thread, circ_file, hisat_bam, rnaser_file, reads, outdir, pre
     sample_exp = expression_level(circ_info, bsj_reads, fsj_reads)
 
     # circRNA annotation
-
-    from version import __version__
     header = [
         'Sample: {}'.format(prefix),
         'Total_Reads: {}'.format(total_reads),
@@ -739,7 +740,6 @@ class GTFParser(object):
         self.start, self.end = int(content[3]), int(content[4])
         self.strand = content[6]
         self.attr_string = content[8]
-
 
     @property
     def attr(self):

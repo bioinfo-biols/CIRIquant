@@ -98,11 +98,11 @@ def factor(d):
 
 
 def fit_model(x, y):
-    from sklearn import linear_model, cross_validation
+    from sklearn import linear_model, model_selection
     import warnings
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=DeprecationWarning)
-        x_train, x_test, y_train, y_test = cross_validation.train_test_split(x, y, test_size=0.4, random_state=0)
+        x_train, x_test, y_train, y_test = model_selection.train_test_split(x, y, test_size=0.4, random_state=0)
         clf = linear_model.LinearRegression(fit_intercept=True)
         clf.fit(x_train, y_train)
 
@@ -119,13 +119,13 @@ def fit_model(x, y):
 
 
 def prior_distribution(x, y):
-    from sklearn.mixture import GMM
+    from sklearn.mixture import GaussianMixture
     import warnings
 
     coeff = y / x
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=DeprecationWarning)
-        models = [GMM(i).fit(coeff) for i in np.arange(1, 4)]
+        models = [GaussianMixture(i).fit(coeff) for i in np.arange(1, 4)]
     AIC = [m.aic(coeff) for m in models]
     # BIC = [m.bic(coeff) for m in models]
     gmm = models[np.argmin(AIC)]

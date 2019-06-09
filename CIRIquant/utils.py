@@ -35,18 +35,20 @@ def get_thread_num(thread):
 
 def check_file(file_name):
     if os.path.exists(file_name) and os.path.isfile(file_name):
-        return 1
+        return os.path.abspath(file_name)
     else:
         sys.exit('File: {}, not found'.format(file_name))
 
 
 def check_dir(dir_name):
     if os.path.exists(dir_name):
-        if not os.path.isdir(dir_name):
+        if os.path.isdir(dir_name):
+            pass # Output directory already exists
+        else:
             sys.exit('Directory: {}, clashed with existed files'.format(dir_name))
     else:
         os.mkdir(dir_name)
-    return 1
+    return os.path.abspath(dir_name)
 
 
 def check_config(config_file):
@@ -87,3 +89,45 @@ def check_samtools_version(samtools):
     if version and cmp(LooseVersion(version), LooseVersion('1.3.1')) < 0:
         sys.exit('samtools version too low, 1.3.1 required')
     return 1
+
+
+def convert_bed(ciri_file):
+    out_file = ciri_file + '.bed'
+    with open(ciri_file, 'r') as f, open(out_file, 'w') as out:
+        f.readline()
+        for line in f:
+            content = line.rstrip().split('\t')
+            chrom, start, end = content[1:4]
+            strand = content[10]
+            out.write('\t'.join([chrom, start, end, '{}:{}|{}'.format(chrom, start, end), '.', strand]) + '\n')
+    return out_file
+
+
+TOOLS = ['CIRI2']
+
+
+class CIRCparser(object):
+    """convert circRNA prediction results to bed file"""
+    def __init__(self, circ, tool):
+        self.circ = circ
+        if tool not in TOOLS:
+            sys.exit('Tool: {} not in supported list, please manually convert the circRNA coordinates to bed file.')
+        self.tool = tool
+
+    def _ciri2(self):
+        circ_data = []
+        with open(self.circ, 'r') as f:
+            f.readline()
+            for line in f:
+                content = line.rstrip().split('\t')
+                chrom, start, end, strand = content[1], int(content[2]), int(content[3]), content[10]
+                circ_data.append([chrom, start, end, strand])
+        return circ_data
+
+    def convert(self, out_file):
+        circ_data = getattr(self, '_' + self.tool.lower())()
+        with open(out_file, 'w') as out:
+            for chrom, start, end, strand in circ_data:
+                tmp_line = [chrom, start, end, '{}:{}|{}'.format(chrom, start, end), '.', strand]
+                out.write('\t'.join([str(x) for x in tmp_line]) + '\n')
+        return out_file
