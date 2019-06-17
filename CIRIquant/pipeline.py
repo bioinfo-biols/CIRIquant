@@ -40,13 +40,13 @@ def align_genome(log_file, thread, reads, outdir, prefix):
 
     with open(log_file, 'a') as log:
         LOGGER.debug(hisat_cmd)
-        # subprocess.call(hisat_cmd, shell=True, stderr=log)
+        subprocess.call(hisat_cmd, shell=True, stderr=log)
 
         LOGGER.debug(sort_cmd)
-        # subprocess.call(sort_cmd, shell=True, stderr=log)
+        subprocess.call(sort_cmd, shell=True, stderr=log)
 
         LOGGER.debug(index_cmd)
-        # subprocess.call(index_cmd, shell=True, stderr=log)
+        subprocess.call(index_cmd, shell=True, stderr=log)
 
     return sorted_bam
 
@@ -71,8 +71,7 @@ def gene_abundance(log_file, thread, outdir, prefix, hisat_bam):
 
     with open(log_file, 'a') as log:
         LOGGER.debug(stringtie_cmd)
-        # subprocess.call(stringtie_cmd, shell=True, stderr=log)
-        pass
+        subprocess.call(stringtie_cmd, shell=True, stderr=log)
 
     LOGGER.debug('Gene expression profile: {}/{}_genes.list'.format(gene_dir, prefix))
     return 1
@@ -94,7 +93,7 @@ def run_bwa(log_file, thread, cand_reads, outdir, prefix):
     LOGGER.debug(bwa_cmd)
     with open(log_file, 'a') as log:
         LOGGER.debug(bwa_cmd)
-        # subprocess.call(bwa_cmd, shell=True, stderr=log, stdout=log)
+        subprocess.call(bwa_cmd, shell=True, stderr=log, stdout=log)
 
     LOGGER.debug('BWA-mem sam: ' + bwa_sam)
     return bwa_sam
@@ -114,7 +113,7 @@ def run_ciri(log_file, thread, bwa_sam, outdir, prefix):
 
     with open(log_file, 'a') as log:
         LOGGER.debug(ciri_cmd)
-        # subprocess.call(ciri_cmd, shell=True, stderr=log, stdout=log)
+        subprocess.call(ciri_cmd, shell=True, stderr=log, stdout=log)
 
     return ciri_file
 

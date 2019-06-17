@@ -4,3 +4,4 @@ pysam
 numpy
 scipy
 scikit-learn
+numexpr

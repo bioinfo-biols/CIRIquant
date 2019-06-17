@@ -33,12 +33,13 @@ setup(
     entry_points={
         'console_scripts': [
             'CIRIquant=CIRIquant.main:main',
+            'CIRI_DE=CIRIquant.de:main',
         ]
     },
     keywords='circRNA',
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'argparse', 'simplejson', 'pysam', 'numpy', 'scipy', 'scikit-learn',
+        'argparse', 'PyYAML', 'pysam', 'numpy', 'scipy', 'scikit-learn', 'numexpr'
     ],
 )

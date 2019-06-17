@@ -67,16 +67,21 @@ def correction(sample_exp, sample_stat, rnaser_exp, rnaser_stat):
 
     for i in rnaser_exp:
         if i in sample_exp and sample_exp[i]['bsj'] == 0 and rnaser_exp[i]['fsj'] != 0:
-            corrected_bsj = coef_mean *  sample_exp[i]['fsj'] * rnaser_exp[i]['bsj'] / rnaser_exp[i]['fsj']
+            corrected_bsj = coef_mean * sample_exp[i]['fsj'] * rnaser_exp[i]['bsj'] / rnaser_exp[i]['fsj']
             corrected_ratio = junc_ratio(corrected_bsj, sample_exp[i]['fsj'])
-            circ_exp[i] = {'bsj': corrected_bsj, 'fsj': sample_exp[i]['fsj'], 'ratio': corrected_ratio}
+            circ_exp[i] = {
+                'bsj': corrected_bsj, 'fsj': sample_exp[i]['fsj'], 'ratio': corrected_ratio,
+                'rnaser_bsj': rnaser_exp[i]['bsj'], 'rnaser_fsj': rnaser_exp[i]['fsj']}
         elif i in sample_exp and sample_exp[i]['bsj'] != 0:
             circ_exp[i] = sample_exp[i]
         else:
             corrected_bsj = rnaser_exp[i]['bsj'] * exp_constant
             corrected_fsj = corrected_bsj / (rnaser_exp[i]['bsj'] / rnaser_exp[i]['fsj']) / coef_mean if rnaser_exp[i]['fsj'] != 0 else 0
             corrected_ratio = junc_ratio(corrected_bsj, corrected_fsj)
-            circ_exp[i] = {'bsj': corrected_bsj, 'fsj': corrected_fsj, 'ratio': corrected_ratio}
+            circ_exp[i] = {
+                'bsj': corrected_bsj, 'fsj': corrected_fsj, 'ratio': corrected_ratio,
+                'rnaser_bsj': rnaser_exp[i]['bsj'], 'rnaser_fsj': rnaser_exp[i]['fsj'],
+            }
 
     for i in sample_exp:
         if i in circ_exp:

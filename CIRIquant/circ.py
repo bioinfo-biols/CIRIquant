@@ -306,7 +306,7 @@ def proc_denovo_bam(bam_file, thread, threshold):
 
     pool = Pool(thread, denovo_initializer, (bam_file, threshold, ))
     jobs = []
-    chunk_size = max(500, len(header) / threshold + 1)
+    chunk_size = max(500, len(header) / thread + 1)
     for circ_chunk in grouper(header, chunk_size):
         jobs.append(pool.apply_async(denovo_worker, (circ_chunk, )))
     pool.close()
