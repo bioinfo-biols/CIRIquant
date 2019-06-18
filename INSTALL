@@ -1,0 +1,18 @@
+**NOTE: Only python2 is supported**
+
+Use the setup.py for CIRIquant installation (clean install under virutalenv is highly recommended).
+
+# create and activate virtualenv
+
+$ virtualenv -p python2 venv
+$ source ./venv/bin/activate
+
+# Install CIRIquant and its requirement automatically
+$ python setup.py install
+
+$ tar zxvf CIRIquant.tar.gz
+$ cd CIRIquant
+$ python setup.py install
+
+# Manual installation of required pacakges is also supported
+$ pip install -r requirements.txt

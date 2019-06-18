@@ -40,6 +40,8 @@ Samtools version should be higher than `1.3.1`, as older version of samtools may
 
 ### 1. Installation ###
 
+**Note**: Only python2 is supported 
+
 Use the setup.py for CIRIquant installation (clean install under virutalenv is highly recommended).
 
 ```bash
