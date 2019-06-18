@@ -46,6 +46,7 @@ Use the setup.py for CIRIquant installation (clean install under virutalenv is h
 
 ```bash
 # create and activate virtual env
+pip install virtualenv
 virtualenv venv
 source ./venv/bin/activate
 
