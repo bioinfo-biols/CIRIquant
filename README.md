@@ -10,7 +10,7 @@ Maintainer: Jinyang Zhang
 
 ### Release Notes ###
 
-- Version 0.1: init commit
+- Version 0.2.0: add correction for RNase R treatment
 
 ### License ###
 
