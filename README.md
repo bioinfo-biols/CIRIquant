@@ -74,7 +74,7 @@ Options (defaults in parentheses):
   -e, --log         Specific log file (default: sample_prefix.log)
   -p, --prefix      Output sample prefix (default: input sample name)
   -t, --threads     Number of CPU threads to use (defualt: 4)
-  
+
   --bed             User provided Back-Spliced Junction Site in BED format
   --circ            User provided circRNA prediction results
   --tool            User provided tool name for circRNA prediction
@@ -121,7 +121,7 @@ chr1    10000   10099   chr1:10000|10099    .   +
 chr1    31000   31200   chr1:31000|31200    .   -
 ```
 
-**NOTE**: --circ and --tool options can only parse CIRI2 results temporarily, the support for other algorithms is under active development 
+**NOTE**: --circ and --tool options can only parse CIRI2 results temporarily, the support for other algorithms is under active development
 ### 3. Output files ###
 
 The main output of CIRIquant is a GTF file, that contains detailed information of BSJ and FSJ reads of circRNAs and annotation of circRNA back-spliced regions in the attribute columns
@@ -157,16 +157,18 @@ The attributes containing several pre-defined keys and values:
 
 ### 4. Example Usage ###
 
-Test data set can be retrived under `test_data/quant` folder, you can replace the path of required software in the `chr1.yml` with your own version
+Test data set can be retrived from `test_data.tar.gz`, you can replace the path of required software in the `chr1.yml` with your own version
 
 ```
+tar zxvf test_data.tar.gz
 cd test_data/quant
-CIRIquant2 --config chr1.yml \
-    -1 test_1.fq.gz \
-    -2 test_2.fq.gz \
-    -o ./test_output \
-    -p test \
-    -t 4
+CIRIquant -t 4 \
+          -1 ./test_1.fq.gz \
+          -2 ./test_2.fq.gz \
+          --config ./chr1.yml \
+          --no-gene \
+          -o ./test \
+          -p test
 ```
 
 The output file `test.gtf` should be located under `test_data/quant/test_output/`
@@ -198,7 +200,7 @@ Usage:
 Options (defaults in parentheses):
 
   -p                p value threshold for DE and DS score calculation (default: 0.05)
-  -t                numer of threads (default: 4)  
+  -t                numer of threads (default: 4)
 ```
 
 The output format `CIRI_DE` is in the format below:
@@ -219,8 +221,8 @@ The output format `CIRI_DE` is in the format below:
 
 **NOTE**: Gene abundance are used for normalization analysis, so all samples should run without `--no-gene` option provided
 
-For study with biological replicates, a customed analysis pipeline of edgeR is recommended, the `prep_CIRIquant.py` 
-is provided to generate matrix of circRNA expression level / junction ratio 
+For study with biological replicates, a customed analysis pipeline of edgeR is recommended, the `prep_CIRIquant.py`
+is provided to generate matrix of circRNA expression level / junction ratio
 
 A tab-seperated list of sample IDS and path to CIRIquant output GTF file should be specificed respectively
 
