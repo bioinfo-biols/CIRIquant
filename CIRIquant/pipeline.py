@@ -90,7 +90,6 @@ def run_bwa(log_file, thread, cand_reads, outdir, prefix):
         ' '.join(cand_reads),
         bwa_sam,
     )
-    LOGGER.debug(bwa_cmd)
     with open(log_file, 'a') as log:
         LOGGER.debug(bwa_cmd)
         subprocess.call(bwa_cmd, shell=True, stderr=log, stdout=log)

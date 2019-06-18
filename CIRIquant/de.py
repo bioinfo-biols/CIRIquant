@@ -3,6 +3,7 @@
 import os
 import sys
 import argparse
+import logging
 from multiprocessing import Pool
 from collections import namedtuple
 
@@ -11,9 +12,7 @@ np.random.seed(5)
 import numexpr as ne
 ne.set_num_threads(4)
 
-from logger import ProgressBar
-
-LOGGER = None
+LOGGER = logging.getLogger('CIRI_DE')
 CIRC = namedtuple('CIRC', 'bsj fsj ratio rnaser_bsj rnaser_fsj')
 
 
@@ -21,41 +20,41 @@ def main():
     global LOGGER
     from circ import grouper
     from logger import get_logger
-    from utils import check_file, check_dir
+    from utils import check_file, get_thread_num
 
     # Init argparser
     parser = argparse.ArgumentParser()
 
-    # Sample with replicates
-    parser.add_argument('-i', dest='sample_list', metavar='SAMPLE', default=None,
-                        help='Sample list', )
-
-    # Sample without replicate
     parser.add_argument('-n', dest='control', metavar='CONTROL', default=None,
                         help='control gtf file', )
     parser.add_argument('-c', dest='case', metavar='CASE', default=None,
                         help='case gtf file', )
+    parser.add_argument('-o', dest='out', metavar='FILE', default='CIRI_DE.csv',
+                        help='output file name', )
+    parser.add_argument('-p', dest='pval', metavar='FLOAT', default=0.05,
+                        help='P value threshold for DE and DS score calculation', )
+    parser.add_argument('-t', '--threads', dest='cpu_threads', default=4, metavar='INT',
+                        help='Number of CPU threads, default: 4', )
 
     # Optional parameters
-    parser.add_argument('-l', dest='read_len', metavar='INT', default=None,
-                        help='read length')
     args = parser.parse_args()
 
-    thread = 4
+    thread = get_thread_num(int(args.cpu_threads))
+    LOGGER = get_logger('CIRI_DE', None, False)
 
-    out_dir = check_dir('./CIRI_DE')
-    de_file = out_dir + '/differential_expression.csv'
-    ds_file = out_dir + '/differential_splicing.csv'
-    de_mtx = out_dir + '/bsj_reads.mtx'
-    ds_mtx = out_dir + '/junction_ratio.mtx'
-
-    LOGGER = get_logger('CIRIquant', './CIRI_DE/run.log', True)
-
-    read_len = int(args.read_len)
     size = 100000
+
+    pval = float(args.pval)
+    assert 0 < pval < 0.5
 
     # Load GTF
     case_gtf, ctrl_gtf = check_file(args.case), check_file(args.control)
+    out_csv = os.path.abspath(args.out)
+
+    LOGGER.info('Experiment: {}'.format(os.path.basename(case_gtf)))
+    LOGGER.info('Control: {}'.format(os.path.basename(ctrl_gtf)))
+    LOGGER.info('Threads: {}'.format(thread))
+    LOGGER.info('Threshold: {}'.format(args.pval))
 
     case_header, case_data = load_gtf(case_gtf)
     ctrl_header, ctrl_data = load_gtf(ctrl_gtf)
@@ -65,11 +64,18 @@ def main():
     # Multiprocessing
     all_circ = set(case_data.keys() + ctrl_data.keys())
 
-    pool = Pool(thread, score_initializer, (case_data, ctrl_data, case_header, ctrl_header, size))
     jobs = []
     chunk_size = max(1000, len(all_circ) / thread + 1)
-    for circ_chunk in grouper(all_circ, chunk_size):
-        jobs.append(pool.apply_async(score_worker, (circ_chunk, factor, )))
+
+    if 'N' in case_header and 'N' in ctrl_header:
+        pool = Pool(thread, correction_initializer, (case_data, case_header, ctrl_data, ctrl_header, size, pval))
+        for circ_chunk in grouper(all_circ, chunk_size):
+            jobs.append(pool.apply_async(correction_worker, (circ_chunk, factor, )))
+    else:
+        pool = Pool(thread, score_initializer, (case_data, ctrl_data, size, pval))
+        for circ_chunk in grouper(all_circ, chunk_size):
+            jobs.append(pool.apply_async(score_worker, (circ_chunk, factor, )))
+
     pool.close()
     pool.join()
 
@@ -78,18 +84,23 @@ def main():
         tmp_score = job.get()
         circ_scores.update(tmp_score)
 
-    with open('./CIRI_DE/CIRI_DE.results.csv', 'w') as out:
-        out.write('circRNA_ID\tDE_score\tDS_score\n')
+    LOGGER.info('Output csv: {}'.format(out_csv))
+    with open(out_csv, 'w') as out:
+        out.write('circRNA_ID\tCase_BSJ\tCase_FSJ\tCase_Ratio\tCtrl_BSJ\tCtrl_FSJ\tCtrl_Ratio\tDE_score\tDS_score\n')
         for circ_id in all_circ:
             case_bsj = int(case_data[circ_id].bsj) if circ_id in case_data else 0
-            ctrl_bsj = int(ctrl_data[circ_id].bsj) if circ_id in ctrl_data else 0
-
             case_fsj = int(case_data[circ_id].fsj) if circ_id in case_data else 0
+            case_ratio = float(case_data[circ_id].ratio) if circ_id in case_data else 0
+
+            ctrl_bsj = int(ctrl_data[circ_id].bsj) if circ_id in ctrl_data else 0
             ctrl_fsj = int(ctrl_data[circ_id].fsj) if circ_id in ctrl_data else 0
+            ctrl_ratio = float(ctrl_data[circ_id].ratio) if circ_id in ctrl_data else 0
 
             tmp_de, tmp_ds = circ_scores[circ_id]
 
-            out.write('{}\t{}\t{}\n'.format(circ_id, tmp_de, tmp_ds))
+            tmp_line = [circ_id, case_bsj, case_fsj, case_ratio, ctrl_bsj, ctrl_fsj, ctrl_ratio, tmp_de, tmp_ds]
+
+            out.write('\t'.join([str(x) for x in tmp_line]) + '\n')
 
     LOGGER.info('Finished!')
 
@@ -98,56 +109,73 @@ CASE = None
 CTRL = None
 CASE_PRIOR = []
 CTRL_PRIOR = []
-SIZE = 10000
+SIZE = 100000
+PVAL = 0.05
 
 
-def score_initializer(case_data, case_header, ctrl_data, ctrl_header, size):
+def score_initializer(case_data, ctrl_data, size, pval):
+    global CASE, CTRL
+    global SIZE, PVAL
+    CASE, CTRL = case_data, ctrl_data
+    SIZE = size
+    PVAL = pval
+
+
+def correction_initializer(case_data, case_header, ctrl_data, ctrl_header, size, pval):
     global CASE, CTRL, CASE_PRIOR, CTRL_PRIOR
-    global SIZE
+    global SIZE, PVAL
     CASE, CTRL = case_data, ctrl_data
     CASE_PRIOR = gmm_sampling(case_header)
     CTRL_PRIOR = gmm_sampling(ctrl_header)
     SIZE = size
+    PVAL = pval
 
 
 def score_worker(circ_ids, factor):
     score_data = {}
     for circ_id in circ_ids:
-        if circ_id in CASE:
-            if CASE[circ_id].rnaser_fsj and CASE[circ_id].fsj != 0:
-                case_dis = prior_sampling(CASE_PRIOR, CASE[circ_id].rnaser_bsj, CASE[circ_id].rnaser_fsj, CASE[circ_id].fsj)
-            else:
-                case_dis = np.random.gamma(shape=int(CASE[circ_id].bsj) + 1 + 1, size=SIZE)
-        else:
-            case_dis = np.random.gamma(shape=1, size=SIZE)
-
-        if circ_id in CTRL:
-            if CTRL[circ_id].rnaser_fsj and CTRL[circ_id].fsj != 0:
-                ctrl_dis = prior_sampling(CTRL_PRIOR, CTRL[circ_id].rnaser_bsj, CTRL[circ_id].rnaser_fsj, CTRL[circ_id].fsj)
-            else:
-                ctrl_dis = np.random.gamma(shape=int(CTRL[circ_id].bsj) + 1 + 1, size=SIZE)
-        else:
-            ctrl_dis = np.random.gamma(shape=1, size=SIZE)
-
         case_bsj = int(CASE[circ_id].bsj) if circ_id in CASE else 0
         ctrl_bsj = int(CTRL[circ_id].bsj) if circ_id in CTRL else 0
 
-
-
-        tmp_de = de_score(max(case_bsj, 1), max(ctrl_bsj, 1), 1.0 / factor)
+        tmp_de = de_score(max(case_bsj, 1), max(ctrl_bsj, 1), 1.0 / factor, size=SIZE, pval=PVAL)
 
         case_fsj = int(CASE[circ_id].fsj) if circ_id in CASE else 0
         ctrl_fsj = int(CTRL[circ_id].fsj) if circ_id in CTRL else 0
-        tmp_ds = ds_score(max(case_bsj, 1), max(case_fsj, 1), max(ctrl_bsj, 1), max(ctrl_fsj, 1))
+        tmp_ds = ds_score(max(case_bsj, 1), max(case_fsj, 1),
+                          max(ctrl_bsj, 1), max(ctrl_fsj, 1), size=SIZE, pval=PVAL)
 
         score_data[circ_id] = (tmp_de, tmp_ds)
+    return score_data
+
+
+def correction_worker(circ_ids, factor):
+    score_data = {}
+    for circ_id in circ_ids:
+        if circ_id in CASE:
+            if CASE[circ_id].rnaser_fsj and CASE[circ_id].fsj != 0:
+                case_exp = prior_exp_sampling(CASE_PRIOR, CASE[circ_id].rnaser_bsj, CASE[circ_id].rnaser_fsj, CASE[circ_id].fsj)
+            else:
+                case_exp = np.random.gamma(shape=int(CASE[circ_id].bsj) + 1 + 1, size=SIZE)
+        else:
+            case_exp = np.random.gamma(shape=1, size=SIZE)
+
+        if circ_id in CTRL:
+            if CTRL[circ_id].rnaser_fsj and CTRL[circ_id].fsj != 0:
+                ctrl_exp = prior_exp_sampling(CTRL_PRIOR, CTRL[circ_id].rnaser_bsj, CTRL[circ_id].rnaser_fsj, CTRL[circ_id].fsj)
+            else:
+                ctrl_exp = np.random.gamma(shape=int(CTRL[circ_id].bsj) + 1 + 1, size=SIZE)
+        else:
+            ctrl_exp = np.random.gamma(shape=1, size=SIZE)
+
+        tmp_de = corrected_score(case_exp, ctrl_exp, 1.0 / factor, size=SIZE, pvalue=PVAL)
+        score_data[circ_id] = (tmp_de, None)
     return score_data
 
 
 def load_gtf(in_file):
     from circ import GTFParser
 
-    LOGGER.info('Loading GTF {}'.format(in_file))
+    LOGGER.info('Loading CIRIquant result: {}'.format(in_file))
 
     circ_data = {}
     with open(in_file, 'r') as f:
@@ -183,11 +211,11 @@ def de_score(a, b, factor=1, size=SIZE, pval=0.05):
     return score
 
 
-def de_score_corrected(dis_a, dis_b, factor=1, size=SIZE, pvalue=0.05):
-    # from itertools import izip
+def corrected_score(dis_a, dis_b, factor=1, size=SIZE, pvalue=0.05):
+    from itertools import izip
 
-    fc = ne.evaluate("dis_a / dis_b")
-    # fc = sorted([np.log(j / i) for i, j in izip(dis_a, dis_b)])
+    # fc = ne.evaluate("dis_a / dis_b")
+    fc = sorted([np.log(j / i) for i, j in izip(dis_a, dis_b)])
     miu = np.mean(fc) + factor
     assert len(dis_a) > 0 and len(dis_b) > 0
     if miu >= 0:
@@ -222,9 +250,9 @@ def gmm_sampling(header, size=SIZE):
     return sample
 
 
-def prior_sampling(sample, bsj, fsj, total_fsj):
+def prior_exp_sampling(sample, bsj, fsj, total_fsj):
     factor = depth_factor(bsj / (bsj + 0.5 * fsj))
-    corrected_read = sample * 0.5 * factor * total_fsj
+    corrected_read = ne.evaluate("sample * 0.5 * factor * total_fsj")
     return [np.random.gamma(shape=x + 1) for x in corrected_read if x > 0]
 
 

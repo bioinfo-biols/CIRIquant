@@ -34,6 +34,7 @@ setup(
         'console_scripts': [
             'CIRIquant=CIRIquant.main:main',
             'CIRI_DE=CIRIquant.de:main',
+            'prep_CIRIquant=CIRIquant.prep_CIRIquant:main'
         ]
     },
     keywords='circRNA',

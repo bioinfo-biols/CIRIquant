@@ -62,7 +62,7 @@ def correction(sample_exp, sample_stat, rnaser_exp, rnaser_stat):
         'N: {}'.format(gmm.n_components),
         'W: {}'.format(','.join([str(i) for i in np.round(gmm.weights_, 4)])),
         'M: {}'.format(','.join([str(i[0]) for i in np.round(gmm.means_, 4)])),
-        'SD: {}'.format(','.join([str(i[0]) for i in np.round(gmm.covars_, 4)])),
+        'SD: {}'.format(','.join([str(i[0][0]) for i in np.round(gmm.covariances_, 4)])),
     ]
 
     for i in rnaser_exp:
@@ -71,7 +71,8 @@ def correction(sample_exp, sample_stat, rnaser_exp, rnaser_stat):
             corrected_ratio = junc_ratio(corrected_bsj, sample_exp[i]['fsj'])
             circ_exp[i] = {
                 'bsj': corrected_bsj, 'fsj': sample_exp[i]['fsj'], 'ratio': corrected_ratio,
-                'rnaser_bsj': rnaser_exp[i]['bsj'], 'rnaser_fsj': rnaser_exp[i]['fsj']}
+                'rnaser_bsj': rnaser_exp[i]['bsj'], 'rnaser_fsj': rnaser_exp[i]['fsj']
+            }
         elif i in sample_exp and sample_exp[i]['bsj'] != 0:
             circ_exp[i] = sample_exp[i]
         else:

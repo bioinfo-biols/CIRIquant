@@ -170,6 +170,7 @@ def generate_index(log_file, circ_info, circ_fasta):
         LOGGER.debug('Indexing FASTA')
         index_cmd = '{} faidx {}'.format(utils.SAMTOOLS, utils.FASTA)
         with open(log_file, 'a') as log:
+            LOGGER.debug(index_cmd)
             subprocess.call(index_cmd, shell=True, stderr=log, stdout=log)
     fasta_index = load_fai(fai)
 
@@ -220,6 +221,7 @@ def build_index(log_file, thread, pseudo_fasta, outdir, prefix):
     )
 
     with open(log_file, 'a') as log:
+        LOGGER.debug(build_cmd)
         subprocess.call(build_cmd, shell=True, stderr=log, stdout=log)
 
     return denovo_index
@@ -597,8 +599,8 @@ def proc(log_file, thread, circ_file, hisat_bam, rnaser_file, reads, outdir, pre
     ]
     out_file = '{}/{}.gtf'.format(outdir, prefix)
 
-    import coeff
     if rnaser_file:
+        import coeff
         tmp_header, circ_exp = coeff.correction(sample_exp, sample_stat, rnaser_exp, rnaser_stat)
         header += tmp_header
     else:
@@ -690,17 +692,21 @@ def format_output(circ_info, circ_exp, sample_stat, header, gtf_index, outfile):
                 ]
 
                 field = circRNA_attr(gtf_index, parser)
-                tmp_attr = 'circ_id "{}"; circ_type "{}"; bsj {:.1f}; fsj {:.1f}; junc_ratio {:.3f};'.format(
+                tmp_attr = 'circ_id "{}"; circ_type "{}"; bsj {:.3f}; fsj {:.3f}; junc_ratio {:.3f};'.format(
                     circ_id,
                     field['circ_type'] if field else "Unknown",
                     circ_exp[circ_id]['bsj'],
                     circ_exp[circ_id]['fsj'],
                     circ_exp[circ_id]['ratio'],
                 )
+                for key in 'rnaser_bsj', 'rnaser_fsj':
+                    if key in circ_exp[circ_id]:
+                        tmp_attr += ' {} {:.3f};'.format(key, circ_exp[circ_id][key])
+
                 for key in 'gene_id', 'gene_name', 'gene_type':
-                    if key not in field:
-                        continue
-                    tmp_attr += ' {} "{}";'.format(key, field[key])
+                    if key in field:
+                        tmp_attr += ' {} "{}";'.format(key, field[key])
+
                 tmp_line.append(tmp_attr)
 
                 out.write('\t'.join([str(x) for x in tmp_line]) + '\n')
