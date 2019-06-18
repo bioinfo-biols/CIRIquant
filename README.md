@@ -204,6 +204,9 @@ Options (defaults in parentheses):
 
   -p                p value threshold for DE and DS score calculation (default: 0.05)
   -t                numer of threads (default: 4)
+
+Example usage:
+  CIRI_DE -n control.gtf -c case.gtf -o CIRI_DE.csv
 ```
 
 The output format `CIRI_DE` is in the format below:
@@ -247,6 +250,9 @@ Usage:
   -i                the file of sample list
   --bsj             where to output the circRNA expression matrix
   --ratio           where to output the circRNA junction ratio matrix
+
+Example:
+  prep_CIRIquant -i sample.lst --bsj circRNA_bsj.csv --ratio circRNA_ratio.csv
 ```
 
 These count matrices (CSV files) can then be imported into R for use by DESeq2 and edgeR (using the DESeqDataSetFromMatrix and DGEList functions, respectively).
