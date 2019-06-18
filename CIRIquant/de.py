@@ -12,6 +12,8 @@ np.random.seed(5)
 import numexpr as ne
 ne.set_num_threads(4)
 
+from version import __version__
+
 LOGGER = logging.getLogger('CIRI_DE')
 CIRC = namedtuple('CIRC', 'bsj fsj ratio rnaser_bsj rnaser_fsj')
 
@@ -23,7 +25,7 @@ def main():
     from utils import check_file, get_thread_num
 
     # Init argparser
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog="CIRIquant")
 
     parser.add_argument('-n', dest='control', metavar='CONTROL', default=None,
                         help='control gtf file', )

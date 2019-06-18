@@ -7,6 +7,7 @@ import argparse
 
 
 def main():
+    from version import __version__
     import circ
     import pipeline
     from logger import get_logger
@@ -36,6 +37,8 @@ def main():
 
     parser.add_argument('-v', '--verbose', dest='verbosity', default=False, action='store_true',
                         help='Run in debugging mode', )
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s {version}'.format(version=__version__))
     parser.add_argument('-e', '--log', dest='log_file', default=None, metavar='LOG',
                         help='Log file, default: out_dir/prefix.log', )
 

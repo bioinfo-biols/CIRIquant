@@ -4,6 +4,7 @@ import os
 import sys
 import argparse
 import logging
+from version import __version__
 
 LOGGER = logging.getLogger('prep_CIRIquant')
 
@@ -15,7 +16,7 @@ def main():
     from utils import check_file
 
     # Init argparser
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog="CIRIquant")
 
     parser.add_argument('-i', dest='input', metavar='FILE', required=True,
                         help='input sample list', )
