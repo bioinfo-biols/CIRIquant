@@ -11,6 +11,4 @@ script:
 
 notifications:
   pushover:
-    api_key: "${API_TOKEN}"
-    users:
-      - "${USER_TOKEN}"
+    api_key: ${API_TOKEN}
