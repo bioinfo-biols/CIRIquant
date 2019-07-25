@@ -68,7 +68,7 @@ def check_config(config_file):
     for i in 'bwa', 'hisat2', 'stringtie', 'samtools':
         if i not in config['tools']:
             sys.exit('Tool: {} need to be specificed'.format(i))
-        globals()[i.upper()] = config['tools'][i]
+        globals()[i.upper()] = check_file(config['tools'][i])
 
     # check required software version
     check_samtools_version(config['tools']['samtools'])
@@ -77,7 +77,7 @@ def check_config(config_file):
     for i in 'fasta', 'gtf', 'bwa_index', 'hisat_index':
         if i not in config['reference']:
             sys.exit('Reference {} need to be specificed'.format(i))
-        globals()[i.upper()] = config['reference'][i]
+        globals()[i.upper()] = check_file(config['reference'][i])
 
     return config['name']
 
