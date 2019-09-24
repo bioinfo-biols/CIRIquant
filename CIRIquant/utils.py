@@ -85,7 +85,7 @@ def check_config(config_file):
 
     if 'hisat_index' not in config['reference']:
         sys.exit('HISAT2 index not found')
-    HISAT_INDEX = os.path.splitext(check_file(config['reference']['hisat_index'] + '.1.ht2'))[0]
+    HISAT_INDEX = os.path.splitext(os.path.splitext(check_file(config['reference']['hisat_index'] + '.1.ht2'))[0])[0]
     
     return config['name']
 
