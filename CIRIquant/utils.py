@@ -74,11 +74,19 @@ def check_config(config_file):
     check_samtools_version(config['tools']['samtools'])
 
     # check reference and index
-    for i in 'fasta', 'gtf', 'bwa_index', 'hisat_index':
+    for i in 'fasta', 'gtf':
         if i not in config['reference']:
-            sys.exit('Reference {} need to be specificed'.format(i))
+            sys.exit('Reference {} need to be specified'.format(i))
         globals()[i.upper()] = check_file(config['reference'][i])
 
+    if 'bwa_index' not in config['reference']:
+        sys.exit('BWA index not found')
+    BWA_INDEX = os.path.splitext(check_file(config['reference']['bwa_index'] + '.bwt'))[0]
+
+    if 'hisat_index' not in config['reference']:
+        sys.exit('HISAT2 index not found')
+    HISAT_INDEX = os.path.splitext(check_file(config['reference']['hisat_index'] + '.1.ht2'))[0]
+    
     return config['name']
 
 
