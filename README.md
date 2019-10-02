@@ -38,13 +38,13 @@ Python packages:
     scikit-learn
 ```
 
-**NOTE**:
+**NOTES**:
 
-Samtools version should be higher than `1.3.1`, as older version of samtools may use deprecated parameters in `sort` and other commands
+**1. Only python2 is supported**  
+
+**2. Samtools version should be higher than `1.3.1`, as older version of samtools may use deprecated parameters in `sort` and other commands**
 
 ### 1. Installation ###
-
-**Note**: Only python2 is supported 
 
 Use the setup.py for CIRIquant installation (clean install under virutalenv is highly recommended).
 
@@ -120,8 +120,8 @@ stringtie | the path of `stringite`
 samtools | the path of `samtools`, samtools version below 1.3.1 is not supported
 fasta | reference genome fasta, a fai index by `samtools faidx` is also needed under the same directory
 gtf | annotation file of reference genome
-bwa_index | index of reference genome using `bwa index -w bwtsw`
-hisat_index | index of reference genome using `hisat2-build`
+bwa_index | prefix of BWA index for reference genome
+hisat_index | prefix of HISAT2 index for reference genome
 
 For quantification of user-provided circRNAs, a list of junction sites in bed format is required, for example:
 
@@ -258,11 +258,17 @@ Usage:
   prep_CIRIquant [options]
 
   -i                the file of sample list
+  --lib             where to output library information
+  --circ            where to output circRNA annotation information
   --bsj             where to output the circRNA expression matrix
   --ratio           where to output the circRNA junction ratio matrix
 
 Example:
-  prep_CIRIquant -i sample.lst --bsj circRNA_bsj.csv --ratio circRNA_ratio.csv
+  prep_CIRIquant -i sample.lst \
+                 --lib library_info.csv \
+                 --circ circRNA_info.csv \
+                 --bsj circRNA_bsj.csv \
+                 --ratio circRNA_ratio.csv
 ```
 
 These count matrices (CSV files) can then be imported into R for use by DESeq2 and edgeR (using the DESeqDataSetFromMatrix and DGEList functions, respectively).

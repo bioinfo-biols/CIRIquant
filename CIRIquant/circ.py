@@ -66,7 +66,7 @@ def update_info(circ_info, rnaser_file):
         header = {}
         for line in f:
             if line.startswith('##'):
-                key, value = line.strip('#').split(':')
+                key, value = line.rstrip().strip('#').split(':')
                 header.update({key: value})
                 continue
 
