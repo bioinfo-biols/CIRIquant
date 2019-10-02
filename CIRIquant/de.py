@@ -184,8 +184,8 @@ def load_gtf(in_file):
         header = {}
         for line in f:
             if line.startswith('##'):
-                key, value = line.strip('#').split(':')
-                header.update({key: value})
+                key, value = line.rstrip().strip('#').split(':')
+                header.update({key.strip(): value.strip()})
                 continue
 
             content = line.rstrip().split('\t')
