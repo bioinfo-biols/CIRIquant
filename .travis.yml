@@ -18,11 +18,14 @@ install:
   - python setup.py install
 
 script:
-  - which bwa
-  - which hisat2
-  - which stringtie
-  - which samtools
   - CIRIquant --version
+  - wget https://github.com/Kevinzjy/CIRIquant/releases/download/v0.1.0/test_data.tar.gz
+  - tar zxvf test_data.tar.gz
+  - cd test_data/quant
+  - bwa index -a bwtsw -p chr1.fa chr1.fa
+  - hisat2-build chr1.fa chr1.fa
+  - ls
+
 
 notifications:
   pushover:
