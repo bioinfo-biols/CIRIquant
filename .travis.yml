@@ -18,11 +18,11 @@ install:
   - python setup.py install
 
 script:
-  - CIRIquant --version
   - which bwa
   - which hisat2
   - which stringtie
   - which samtools
+  - CIRIquant --version
 
 notifications:
   pushover:
