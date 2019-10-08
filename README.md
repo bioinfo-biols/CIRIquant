@@ -14,7 +14,8 @@ Maintainer: Jinyang Zhang
 
 ### Release Notes ###
 
-- Version 0.1.0: add correction for RNase R treatment
+- Version 0.2.0: Fixed bug in prep_CIRIquant, add support for UCSC & Ensembl annotation file
+- Version 0.1.0: Add correction for RNase R treatment
 
 ### License ###
 

@@ -774,6 +774,11 @@ def index_annotation(gtf):
             if content[2] not in ['gene', 'exon']:
                 continue
             parser = GTFParser(content)
+            if 'gene_biotype' in parser.attr and parser.attr['gene_biotype'] in ['lincRNA', 'pseudogene']:
+                continue
+            if 'gene_type' in parser.attr and parser.attr['gene_type'] in ['lincRNA', 'pseudogene']:
+                continue
+
             start_div, end_div = parser.start / 500, parser.end / 500
             for i in xrange(start_div, end_div + 1):
                 gtf_index[parser.chrom].setdefault(i, []).append(parser)
@@ -793,10 +798,8 @@ def circRNA_attr(gtf_index, circ):
     start_element = defaultdict(list)
     end_element = defaultdict(list)
 
-    single_gene = 1
     for x in xrange(start_div, end_div + 1):
         if x not in gtf_index[circ.chrom]:
-            single_gene = 0
             continue
         for element in gtf_index[circ.chrom][x]:
             # start site
@@ -805,9 +808,10 @@ def circRNA_attr(gtf_index, circ):
             # end site
             if element.start <= circ.end <= element.end and element.strand == circ.strand:
                 end_element[element.type].append(element)
+            # TODO: add filter for GTF UCSC table browser, with have no 'gene' line in GTF
             # annotation
-            if element.type != 'gene':
-                continue
+            # if element.type != 'gene':
+            #     continue
             if element.end < circ.start or circ.end < element.start:
                 continue
             if element.attr['gene_id'] not in host_gene:
@@ -815,55 +819,90 @@ def circRNA_attr(gtf_index, circ):
 
     circ_type = {}
     forward_host_gene = []
+    antisense_host_gene = []
 
-    if host_gene and single_gene:
+    if len(host_gene) > 0:
         for gene_id in host_gene:
             if host_gene[gene_id].strand == circ.strand:
                 forward_host_gene.append(host_gene[gene_id])
-                if 'gene' in start_element and 'gene' in end_element:
-                    if 'exon' in start_element and 'exon' in end_element:
-                        circ_type['exon'] = 1
-                    else:
-                        circ_type['intron'] = 1
+                if 'exon' in start_element and 'exon' in end_element:
+                    circ_type['exon'] = 1
                 else:
-                    circ_type['gene_intergenic'] = 1
+                    circ_type['intron'] = 1
             else:
+                antisense_host_gene.append(host_gene[gene_id])
                 circ_type['antisense'] = 1
     else:
         circ_type['intergenic'] = 1
 
+    if len(forward_host_gene) > 1:
+        circ_type['gene_intergenic'] = 1
+
     field = {}
-    if 'exon' in circ_type:
+    if 'exon' in circ_type or 'gene_intergenic':
         field['circ_type'] = 'exon'
     elif 'intron' in circ_type:
         field['circ_type'] = 'intron'
-    elif 'gene_intergenic' in circ_type:
-        field['circ_type'] = 'intergenic'
+    # elif 'gene_intergenic' in circ_type:
+    #     field['circ_type'] = 'gene_intergenic'
     elif 'antisense' in circ_type:
         field['circ_type'] = 'antisense'
     else:
         field['circ_type'] = 'intergenic'
 
-    # gene_id, gene_name, gene_type / gene_biotype
     if len(forward_host_gene) == 1:
-        field.update({
-            'gene_id': forward_host_gene[0].attr['gene_id'],
-            'gene_name': forward_host_gene[0].attr['gene_name'],
-            'gene_type': forward_host_gene[0].attr['gene_type'] if 'gene_type' in forward_host_gene[0].attr else forward_host_gene[0].attr['gene_biotype'],
-        })
-    elif forward_host_gene:
+        if 'gene_id' in forward_host_gene[0].attr:
+            field['gene_id'] = forward_host_gene[0].attr['gene_id']
+        if 'gene_name' in forward_host_gene[0].attr:
+            field['gene_name'] = forward_host_gene[0].attr['gene_name']
+        if 'gene_type' in forward_host_gene[0].attr:
+            field['gene_type'] = forward_host_gene[0].attr['gene_type']
+        elif 'gene_biotype' in forward_host_gene[0].attr:
+            field['gene_type'] = forward_host_gene[0].attr['gene_biotype']
+        else:
+            pass
+    elif len(forward_host_gene) > 1:
         tmp_gene_id = []
         tmp_gene_name = []
         tmp_gene_type = []
         for x in forward_host_gene:
-            tmp_gene_id.append(x.attr['gene_id'])
-            tmp_gene_name.append(x.attr['gene_name'])
-            tmp_gene_type.append(x.attr['gene_type'] if 'gene_type' in x.attr else x.attr['gene_biotype'])
-        field.update({
-            'gene_id': ','.join(tmp_gene_id),
-            'gene_name': ','.join(tmp_gene_name),
-            'gene_type': ','.join(tmp_gene_type),
-        })
+            if 'gene_id' in x.attr:
+                tmp_gene_id.append(x.attr['gene_id'])
+            if 'gene_name' in x.attr:
+                tmp_gene_name.append(x.attr['gene_name'])
+            if 'gene_type' in x.attr:
+                tmp_gene_type.append(x.attr['gene_type'])
+            elif 'gene_biotype' in x.attr:
+                tmp_gene_type.append(x.attr['gene_biotype'])
+            else:
+                pass
+        if len(tmp_gene_id) > 0:
+            field['gene_id'] = ','.join(tmp_gene_id)
+        if len(tmp_gene_name) > 0:
+            field['gene_name'] = ','.join(tmp_gene_name)
+        if len(tmp_gene_type) > 0:
+            field['gene_type'] = ','.join(tmp_gene_type)
+    elif field['circ_type'] == 'antisense' and len(antisense_host_gene) > 0:
+        tmp_gene_id = []
+        tmp_gene_name = []
+        tmp_gene_type = []
+        for x in antisense_host_gene:
+            if 'gene_id' in x.attr:
+                tmp_gene_id.append(x.attr['gene_id'])
+            if 'gene_name' in x.attr:
+                tmp_gene_name.append(x.attr['gene_name'])
+            if 'gene_type' in x.attr:
+                tmp_gene_type.append(x.attr['gene_type'])
+            elif 'gene_biotype' in x.attr:
+                tmp_gene_type.append(x.attr['gene_biotype'])
+            else:
+                pass
+        if len(tmp_gene_id) > 0:
+            field['gene_id'] = ','.join(tmp_gene_id)
+        if len(tmp_gene_name) > 0:
+            field['gene_name'] = ','.join(tmp_gene_name)
+        if len(tmp_gene_type) > 0:
+            field['gene_type'] = ','.join(tmp_gene_type)
     else:
         pass
 

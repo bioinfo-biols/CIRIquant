@@ -95,17 +95,17 @@ def main():
 
     # library information and circRNA annotation
     with open(lib_file, 'w') as lib_out, open(info_file, 'w') as info_out:
-        info_out.write('circ_id\tcirc_type\tgene_id\tgene_name\tgene_type\n')
+        info_out.write('circ_id,circ_type,gene_id,gene_name,gene_type\n')
         for circ_id in circ_ids:
             tmp_circ = all_circ[circ_id]
             tmp_line = [circ_id, tmp_circ.circ_type, tmp_circ.gene_id, tmp_circ.gene_name, tmp_circ.gene_type]
-            info_out.write('\t'.join(tmp_line) + '\n')
+            info_out.write(','.join(tmp_line) + '\n')
 
-        lib_out.write('Sample\tTotal\tMapped\tCircular\n')
+        lib_out.write('Sample,Total,Mapped,Circular\n')
         for sample in sample_names:
             tmp_sample = all_sample[sample]
             tmp_line = [sample, tmp_sample['Total_Reads'], tmp_sample['Mapped_Reads'], tmp_sample['Circular_Reads']]
-            lib_out.write('\t'.join(tmp_line) + '\n')
+            lib_out.write(','.join(tmp_line) + '\n')
 
     # BSJ and junction ratio
     with open(bsj_file, 'w') as bsj_out, open(ratio_file, 'w') as ratio_out:
