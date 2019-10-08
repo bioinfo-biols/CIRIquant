@@ -10,7 +10,6 @@ install:
   - hash -r
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
-  - conda info -a
   - conda create -q -n CIRIquant python=2.7
   - conda activate CIRIquant
   - conda install -c bioconda samtools hisat2 stringtie bwa
@@ -24,7 +23,7 @@ script:
   - cd test_data/quant
   - bwa index -a bwtsw -p chr1.fa chr1.fa
   - hisat2-build chr1.fa chr1.fa
-  - ls
+  - CIRIquant -t 2 -1 ./test_1.fq.gz -2 ./test_2.fq.gz --config ./chr1.yml --no-gene -o ./test -p test
 
 
 notifications:
