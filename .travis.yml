@@ -15,12 +15,12 @@ install:
   - conda install -c bioconda samtools hisat2 stringtie bwa
   - travis_retry pip install -r requirements.txt
   - python setup.py install
+  - wget https://github.com/Kevinzjy/CIRIquant/releases/download/v0.1.0/test_data_prebuilt.tar.gz
+  - tar zxvf test_data_prebuilt.tar.gz
 
 script:
-  - CIRIquant --version
-  - wget -q https://github.com/Kevinzjy/CIRIquant/releases/download/v0.1.0/test_data_prebuilt.tar.gz
-  - tar zxvf test_data_prebuilt.tar.gz
   - cd test_data/quant
+  - CIRIquant --version
   - CIRIquant -t 2 -1 ./test_1.fq.gz -2 ./test_2.fq.gz --config ./chr1.yml --no-gene -o ./test -p test
   - diff ./test.gtf ./test/test.gtf
 
