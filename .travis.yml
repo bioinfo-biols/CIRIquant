@@ -18,12 +18,13 @@ install:
 
 script:
   - CIRIquant --version
-  - wget https://github.com/Kevinzjy/CIRIquant/releases/download/v0.1.0/test_data.tar.gz
-  - tar zxvf test_data.tar.gz
+  - wget https://github.com/Kevinzjy/CIRIquant/releases/download/v0.1.0/test_data_prebuilt.tar.gz
+  - tar zxvf test_data_prebuilt.tar.gz
   - cd test_data/quant
   - bwa index -a bwtsw -p chr1.fa chr1.fa
   - hisat2-build chr1.fa chr1.fa
   - CIRIquant -t 2 -1 ./test_1.fq.gz -2 ./test_2.fq.gz --config ./chr1.yml --no-gene -o ./test -p test
+  - diff ./test.gtf ./test/test.gtf
 
 
 notifications:

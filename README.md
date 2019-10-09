@@ -182,10 +182,10 @@ CIRIquant -t 4 \
           -p test
 ```
 
-The output file `test.gtf` should be located under `test_data/quant/test_output/`  
+The output file `test.gtf` should be located under `test_data/quant/test`  
 
-The demo dataset should take no more than 10 minutes on a personal computer. It has been tested on 
-my PC, which has a Intel i7-8700 processor and 16G of memory, running Ubuntu 18.04 LTS.
+The demo dataset should take no more than 5 minutes on a personal computer. It has been tested on 
+my PC with Intel i7-8700 processor and 16G of memory, running Ubuntu 18.04 LTS.
 
 
 ### 5. Generate RNase R effect corrected BSJ information ###
