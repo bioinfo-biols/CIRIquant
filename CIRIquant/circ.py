@@ -350,6 +350,7 @@ def denovo_worker(circ_chunk):
         pysam.AlignedSegment, candidate reads with junction signal
 
     """
+    #TODO: add support for stranded specific RNA_seq libraries
     sam = pysam.AlignmentFile(BAM, 'rb')
     cand_reads = []
     for d in circ_chunk:
@@ -808,8 +809,6 @@ def circRNA_attr(gtf_index, circ):
             # end site
             if element.start <= circ.end <= element.end and element.strand == circ.strand:
                 end_element[element.type].append(element)
-            # TODO: add filter for GTF UCSC table browser, with have no 'gene' line in GTF
-            # annotation
             # if element.type != 'gene':
             #     continue
             if element.end < circ.start or circ.end < element.start:

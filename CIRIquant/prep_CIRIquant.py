@@ -101,10 +101,11 @@ def main():
             tmp_line = [circ_id, tmp_circ.circ_type, tmp_circ.gene_id, tmp_circ.gene_name, tmp_circ.gene_type]
             info_out.write(','.join(tmp_line) + '\n')
 
-        lib_out.write('Sample,Total,Mapped,Circular\n')
+        lib_out.write('Sample,Total,Mapped,Circular,Group\n')
         for sample in sample_names:
             tmp_sample = all_sample[sample]
-            tmp_line = [sample, tmp_sample['Total_Reads'], tmp_sample['Mapped_Reads'], tmp_sample['Circular_Reads']]
+            tmp_line = [sample, tmp_sample['Total_Reads'], tmp_sample['Mapped_Reads'],
+                        tmp_sample['Circular_Reads'], 'UNKNOWN']
             lib_out.write(','.join(tmp_line) + '\n')
 
     # BSJ and junction ratio

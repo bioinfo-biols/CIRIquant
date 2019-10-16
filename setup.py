@@ -18,7 +18,7 @@ setup(
     author_email='zhangjinyang@biols.ac.cn',
     maintainer='Jinyang Zhang',
     maintainer_email='zhangjinyang@biols.ac.cn',
-    url='https://github.com/Kevinzjy/CIRI_Quant2',
+    url='https://github.com/Kevinzjy/CIRIquant',
     description='circular RNA quantification pipeline',
     long_description=read('README.md'),
     classifiers=[
