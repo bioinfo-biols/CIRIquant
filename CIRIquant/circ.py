@@ -748,14 +748,16 @@ class GTFParser(object):
         self.strand = content[6]
         self.attr_string = content[8]
 
+
     @property
     def attr(self):
         """
         Parsing attribute column in gtf file
         """
         field = {}
-        for key, value in [re.split(r'\s+', i.strip()) for i in self.attr_string.split(';') if i != '']:
-            field[key] = value.strip('"')
+        for attr_values in [re.split(r'\s+', i.strip()) for i in self.attr_string.split(';') if i != '']:
+            key, value = attr_values[0], attr_values[1:]
+            field[key] = ' '.join(value).strip('"')
         return field
 
 
