@@ -119,7 +119,7 @@ def main():
     logger.info('Config: {} Loaded'.format(config))
 
     thread = get_thread_num(int(args.cpu_threads))
-    anchor = args.anchor
+    anchor = int(args.anchor)
 
     # Step1: Data Preparation
     # Step1.1: HISAT2 mapping
