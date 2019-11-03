@@ -106,7 +106,7 @@ def main():
             tmp_sample = all_sample[sample]
             tmp_line = [sample, tmp_sample['Total_Reads'], tmp_sample['Mapped_Reads'],
                         tmp_sample['Circular_Reads'], 'UNKNOWN']
-            lib_out.write(','.join(tmp_line) + '\n')
+            lib_out.write('\t'.join(tmp_line) + '\n')
 
     # BSJ and junction ratio
     with open(bsj_file, 'w') as bsj_out, open(ratio_file, 'w') as ratio_out:
@@ -123,8 +123,8 @@ def main():
                 else:
                     tmp_bsj.append(0)
                     tmp_ratio.append(0)
-            bsj_out.write(','.join([str(x) for x in tmp_bsj]) + '\n')
-            ratio_out.write(','.join([str(x) for x in tmp_ratio]) + '\n')
+            bsj_out.write('\t'.join([str(x) for x in tmp_bsj]) + '\n')
+            ratio_out.write('\t'.join([str(x) for x in tmp_ratio]) + '\n')
 
     LOGGER.info('Finished!')
 

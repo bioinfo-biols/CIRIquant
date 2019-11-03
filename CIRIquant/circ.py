@@ -357,11 +357,20 @@ def denovo_worker(circ_chunk):
         if d is None:
             continue
         circ_id, junc_site = d['SN'], int(d['LN']) / 2
+
+        tmp_cand = []
+        circ_reads = defaultdict(dict)
         for read in sam.fetch(circ_id, multiple_iterators=True):
-            if read.is_unmapped or read.is_supplementary:
+            if read.is_unmapped or read.is_secondary or read.is_supplementary:
                 continue
+            circ_reads[read.query_name][read.is_read1 - read.is_read2] = 1
             if read.get_overlap(junc_site - THRESHOLD, junc_site + THRESHOLD) >= THRESHOLD * 2:
-                cand_reads.append((read.query_name, read.is_read1 - read.is_read2, circ_id))
+                tmp_cand.append((read.query_name, read.is_read1 - read.is_read2, circ_id))
+
+        for qname, mate_id, circ_id in tmp_cand:
+            if -1 * mate_id in circ_reads[qname]:
+                cand_reads.append((qname, mate_id, circ_id))
+
     sam.close()
 
     return cand_reads
