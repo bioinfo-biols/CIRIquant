@@ -1,8 +1,7 @@
-## CIRquant ##
+## CIRIquant ##
 
 [![Build Status](https://travis-ci.com/Kevinzjy/CIRIquant.svg?branch=master)](https://travis-ci.org/Kevinzjy/CIRIquant)
 [![The MIT License](https://img.shields.io/badge/license-MIT-orange.svg)](https://github.com/Kevinzjy/CIRIquant/blob/master/LICENSE)
-
 
 CIRIquant is a comprehensive analysis pipeline for circRNA detection and quantification in RNA-Seq data
 
@@ -14,8 +13,7 @@ Maintainer: Jinyang Zhang
 
 ### Release Notes ###
 
-- Version 0.2.0: Fixed bug in prep_CIRIquant, add support for UCSC & Ensembl annotation file
-- Version 0.1.0: Add correction for RNase R treatment
+- Version 1.0: The first released version of CIRIquant
 
 ### License ###
 
@@ -47,6 +45,8 @@ Python packages:
 deprecated parameters in `sort` and other commands**
 
 ### 1. Installation ###
+
+**Please use the latest released version from [GitHub](https://github.com/Kevinzjy/CIRIquant/releases) or [SourceForge](https://sourceforge.net/projects/ciri/files/CIRIquant/)**
 
 Use the setup.py for CIRIquant installation (clean install under virutalenv is highly recommended).
 
@@ -190,7 +190,7 @@ CIRIquant -t 4 \
 
 The output file `test.gtf` should be located under `test_data/quant/test`  
 
-The demo dataset should take no more than 5 minutes on a personal computer. It has been tested on 
+The demo dataset should take approximately 5 minutes on a personal computer. It has been tested on 
 my PC with Intel i7-8700 processor and 16G of memory, running Ubuntu 18.04 LTS.
 
 ### 5. Generate RNase R effect corrected BSJ information ###
