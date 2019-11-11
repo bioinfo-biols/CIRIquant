@@ -28,12 +28,12 @@ setup(
         'Operating System :: OS Independent',
     ],
     license='MIT',
-
     packages=find_packages(),
     entry_points={
         'console_scripts': [
             'CIRIquant=CIRIquant.main:main',
             'CIRI_DE=CIRIquant.de:main',
+            'CIRI_DE_replicate=CIRIquant.replicate:main',
             'prep_CIRIquant=CIRIquant.prep_CIRIquant:main'
         ]
     },
@@ -42,6 +42,6 @@ setup(
     zip_safe=False,
     install_requires=[
         'argparse==1.2.1', 'PyYAML==5.1.1', 'pysam==0.15.2', 'numpy==1.16.4',
-        'scipy==1.2.2', 'scikit-learn==0.20.3', 'numexpr==2.6.9'
+        'scipy==1.2.2', 'scikit-learn==0.20.3', 'numexpr==2.6.9',
     ],
 )

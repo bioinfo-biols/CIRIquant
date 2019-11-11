@@ -50,7 +50,7 @@ def main():
     from utils import check_file
 
     # Init argparser
-    parser = argparse.ArgumentParser(prog="CIRIquant")
+    parser = argparse.ArgumentParser(prog="prep_CIRIquant")
 
     parser.add_argument('-i', dest='input', metavar='FILE', required=True,
                         help='input sample list', )
@@ -82,11 +82,17 @@ def main():
     all_sample = {}
     all_data = {}
 
+    is_paired = 0
     with open(sample_lst, 'r') as f:
         for line in f:
-            sample, sample_file = line.rstrip().split()
+            content = line.rstrip().split()
+            sample, sample_file, group = content[0], content[1], content[2]
             sample_header, sample_data, sample_info = load_gtf(sample_file)
             all_sample[sample] = sample_header
+            all_sample[sample]['Group'] = group
+            if len(content) > 3:
+                all_sample[sample]['Subject'] = content[3]
+                is_paired = 1
             all_circ.update(sample_info)
             all_data[sample] = sample_data
 
@@ -99,18 +105,28 @@ def main():
         for circ_id in circ_ids:
             tmp_circ = all_circ[circ_id]
             tmp_line = [circ_id, tmp_circ.circ_type, tmp_circ.gene_id, tmp_circ.gene_name, tmp_circ.gene_type]
-            info_out.write(','.join(tmp_line) + '\n')
+            info_out.write(','.join(['"{}"'.format(x) for x in tmp_line]) + '\n')
 
-        lib_out.write('Sample,Total,Mapped,Circular,Group\n')
+        if is_paired == 0:
+            lib_out.write('Sample,Total,Mapped,Circular,Group\n')
+        else:
+            lib_out.write('Sample,Total,Mapped,Circular,Group,Subject\n')
+
         for sample in sample_names:
             tmp_sample = all_sample[sample]
             tmp_line = [sample, tmp_sample['Total_Reads'], tmp_sample['Mapped_Reads'],
-                        tmp_sample['Circular_Reads'], 'UNKNOWN']
-            lib_out.write('\t'.join(tmp_line) + '\n')
+                        tmp_sample['Circular_Reads'], tmp_sample['Group'], ]
+            if is_paired != 0:
+                if 'Subject' in tmp_sample:
+                    tmp_line.append(tmp_sample['Subject'])
+                else:
+                    LOGGER.error('No subject ID found for {}, please check your input'.format(sample))
+                    sys.exit()
+            lib_out.write(','.join(tmp_line) + '\n')
 
     # BSJ and junction ratio
     with open(bsj_file, 'w') as bsj_out, open(ratio_file, 'w') as ratio_out:
-        tmp_header = ["", ] + sample_names
+        tmp_header = ["circ_id", ] + sample_names
         bsj_out.write(','.join(tmp_header) + '\n')
         ratio_out.write(','.join(tmp_header) + '\n')
 
@@ -123,8 +139,8 @@ def main():
                 else:
                     tmp_bsj.append(0)
                     tmp_ratio.append(0)
-            bsj_out.write('\t'.join([str(x) for x in tmp_bsj]) + '\n')
-            ratio_out.write('\t'.join([str(x) for x in tmp_ratio]) + '\n')
+            bsj_out.write(','.join([str(x) for x in tmp_bsj]) + '\n')
+            ratio_out.write(','.join([str(x) for x in tmp_ratio]) + '\n')
 
     LOGGER.info('Finished!')
 

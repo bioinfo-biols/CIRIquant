@@ -184,6 +184,7 @@ def generate_index(log_file, circ_info, circ_fasta):
             cnt += 1
             if chrom not in fasta_index:
                 sys.exit('Unconsistent chromosome id: {}'.format(chrom))
+
             chrom_start, chrom_length = fasta_index[chrom]
             chrom_seq = extract_seq(utils.FASTA, chrom_start, chrom_length)
 
@@ -317,8 +318,8 @@ def proc_denovo_bam(bam_file, thread, threshold):
     cand_reads = defaultdict(dict)
     for job in jobs:
         tmp_cand = job.get()
-        for read_id, mate_id, circ_id in tmp_cand:
-            cand_reads[read_id][mate_id] = circ_id
+        for read_id, mate_id, circ_id, blocks, cigartuples in tmp_cand:
+            cand_reads[read_id][mate_id] = (circ_id, blocks, cigartuples)
 
     return cand_reads
 
@@ -363,14 +364,15 @@ def denovo_worker(circ_chunk):
         for read in sam.fetch(circ_id, multiple_iterators=True):
             if read.is_unmapped or read.is_secondary or read.is_supplementary:
                 continue
-            circ_reads[read.query_name][read.is_read1 - read.is_read2] = 1
+            circ_reads[query_prefix(read.query_name)][read.is_read1 - read.is_read2] = 1
+            if read.mapping_quality <= 10:
+                continue
             if read.get_overlap(junc_site - THRESHOLD, junc_site + THRESHOLD) >= THRESHOLD * 2:
-                tmp_cand.append((read.query_name, read.is_read1 - read.is_read2, circ_id))
+                tmp_cand.append((read.query_name, read.is_read1 - read.is_read2, circ_id, read.get_blocks(), read.cigartuples))
 
-        for qname, mate_id, circ_id in tmp_cand:
-            if -1 * mate_id in circ_reads[qname]:
-                cand_reads.append((qname, mate_id, circ_id))
-
+        for qname, mate_id, circ_id, blocks, cigartuples in tmp_cand:
+            if -1 * mate_id in circ_reads[query_prefix(qname)]:
+                cand_reads.append((qname, mate_id, circ_id, blocks, cigartuples))
     sam.close()
 
     return cand_reads
@@ -403,18 +405,20 @@ def proc_genome_bam(bam_file, thread, circ_info, cand_reads, threshold):
 
     fp_bsj = defaultdict(dict)
     fsj_reads = defaultdict(dict)
+    cand_to_genome = []
 
     for job in jobs:
-        chrom_fp_bsj, chrom_fsj = job.get()
+        chrom_fp_bsj, chrom_fsj, chrom_cand = job.get()
         for pair_id, mate_id in chrom_fp_bsj:
             fp_bsj[pair_id][mate_id] = 1
         for pair_id, mate_id, circ_id in chrom_fsj:
             fsj_reads[pair_id][mate_id] = circ_id
+        cand_to_genome += chrom_cand
 
     circ_bsj = defaultdict(dict)
     circ_fsj = defaultdict(dict)
     for pair_id in cand_reads:
-        for mate_id, circ_id in cand_reads[pair_id].iteritems():
+        for mate_id, (circ_id, blocks, cigartuples) in cand_reads[pair_id].iteritems():
             if pair_id in fp_bsj and mate_id in fp_bsj[pair_id]:
                 continue
             circ_bsj[circ_id].update({query_prefix(pair_id): 1})
@@ -425,6 +429,14 @@ def proc_genome_bam(bam_file, thread, circ_info, cand_reads, threshold):
                 continue
             circ_fsj[circ_id].update({query_prefix(pair_id): 1})
 
+    # sam = pysam.AlignmentFile(bam_file, 'rb')
+    # cand_sam = pysam.AlignmentFile(bam_file + '.fsj', 'w', template=sam)
+    # cand_sam.close()
+    # sam.close()
+    #
+    # with open(bam_file + '.fsj', 'w') as out:
+    #     for read in cand_to_genome:
+    #         out.write(read + '\n')
     return circ_bsj, circ_fsj
 
 
@@ -459,9 +471,10 @@ def genome_worker(chrom):
     """
 
     if chrom not in CIRC:
-        return {}, {}
+        return {}, {}, []
 
     sam = pysam.AlignmentFile(BAM, 'rb')
+    cand_to_genome = []
 
     fp_bsj = []
     for read in sam.fetch(chrom, multiple_iterators=True):
@@ -470,9 +483,14 @@ def genome_worker(chrom):
             continue
         if read.query_name not in BSJ or read.is_read1 - read.is_read2 not in BSJ[read.query_name]:
             continue
-        circ_id = BSJ[read.query_name][read.is_read1 - read.is_read2]
-        # check alignment against refernce genome
-        if is_linear(read.cigartuples[0]) and is_linear(read.cigartuples[-1]):
+        circ_id, blocks, cigartuples = BSJ[read.query_name][read.is_read1 - read.is_read2]
+        cand_to_genome.append(read.to_string())
+
+        # check alignment against reference genome
+        qual_filter = 1 if mapping_quality(blocks) <= mapping_quality(read.get_blocks()) + 5 else 0
+        linear_filter = 1 if is_linear(read.cigartuples[0]) and is_linear(read.cigartuples[-1]) else 0
+        align_filter = 1 if read.mapping_quality <= 10 or read.is_secondary or read.is_supplementary else 0
+        if qual_filter or linear_filter or align_filter:
             fp_bsj.append((read.query_name, read.is_read1 - read.is_read2))
 
     fsj_reads = []
@@ -481,7 +499,9 @@ def genome_worker(chrom):
         for read in sam.fetch(region='{0}:{1}-{1}'.format(chrom, parser.start)):
             if read.is_unmapped or read.is_supplementary:
                 continue
-            if not read.get_overlap(parser.start - 1, parser.start + THRESHOLD - 1) == THRESHOLD:
+            if read.mapping_quality <= 10:
+                continue
+            if not read.get_overlap(parser.start - 1, parser.start + THRESHOLD - 1) >= THRESHOLD:
                 continue
             if is_mapped(read.cigartuples[0]) and is_mapped(read.cigartuples[-1]):
                 fsj_reads.append((read.query_name, read.is_read1 - read.is_read2, circ_id))
@@ -489,14 +509,20 @@ def genome_worker(chrom):
         for read in sam.fetch(region='{0}:{1}-{1}'.format(chrom, parser.end)):
             if read.is_unmapped or read.is_supplementary:
                 continue
-            if not read.get_overlap(parser.end - THRESHOLD, parser.end) == THRESHOLD:
+            if read.mapping_quality <= 10:
+                continue
+            if not read.get_overlap(parser.end - THRESHOLD, parser.end) >= THRESHOLD:
                 continue
             if is_mapped(read.cigartuples[0]) and is_mapped(read.cigartuples[-1]):
                 fsj_reads.append((read.query_name, read.is_read1 - read.is_read2, circ_id))
 
     sam.close()
 
-    return fp_bsj, fsj_reads
+    return fp_bsj, fsj_reads, cand_to_genome
+
+
+def mapping_quality(blocks):
+    return sum([j - i for i, j in blocks])
 
 
 def is_mapped(cigar_tuple):
@@ -627,14 +653,17 @@ def proc(log_file, thread, circ_file, hisat_bam, rnaser_file, reads, outdir, pre
 def expression_level(circ_info, bsj_reads, fsj_reads):
     LOGGER.info('Merge bsj and fsj results')
     circ_exp = defaultdict(dict)
+    bsj_ids = {}
     for chrom in circ_info:
         for circ_id in circ_info[chrom]:
             bsj = len(bsj_reads[circ_id]) if circ_id in bsj_reads else 0
             fsj = len(fsj_reads[circ_id]) if circ_id in fsj_reads else 0
             if bsj == 0 and fsj == 0:
                 continue
+            bsj_ids[circ_id] = bsj_reads[circ_id].keys()
             junc = 2.0 * bsj / (2.0 * bsj + fsj)
             circ_exp[circ_id] = {'bsj': bsj, 'fsj': fsj, 'ratio': junc}
+
     return circ_exp
 
 
@@ -764,7 +793,7 @@ class GTFParser(object):
         Parsing attribute column in gtf file
         """
         field = {}
-        for attr_values in [re.split(r'\s+', i.strip()) for i in self.attr_string.split(';') if i != '']:
+        for attr_values in [re.split(r'\s+', i.strip()) for i in self.attr_string.split(';')[:-1]]:
             key, value = attr_values[0], attr_values[1:]
             field[key] = ' '.join(value).strip('"')
         return field
@@ -786,10 +815,10 @@ def index_annotation(gtf):
             if content[2] not in ['gene', 'exon']:
                 continue
             parser = GTFParser(content)
-            if 'gene_biotype' in parser.attr and parser.attr['gene_biotype'] in ['lincRNA', 'pseudogene']:
-                continue
-            if 'gene_type' in parser.attr and parser.attr['gene_type'] in ['lincRNA', 'pseudogene']:
-                continue
+            # if 'gene_biotype' in parser.attr and parser.attr['gene_biotype'] in ['lincRNA', 'pseudogene']:
+            #     continue
+            # if 'gene_type' in parser.attr and parser.attr['gene_type'] in ['lincRNA', 'pseudogene']:
+            #     continue
 
             start_div, end_div = parser.start / 500, parser.end / 500
             for i in xrange(start_div, end_div + 1):

@@ -43,7 +43,8 @@ Python packages:
 
 **1. Only python2 is supported**  
 
-**2. Samtools version should be higher than `1.3.1`, as older version of samtools may use deprecated parameters in `sort` and other commands**
+**2. Samtools version should be higher than `1.3.1`, as older version of samtools may use 
+deprecated parameters in `sort` and other commands**
 
 ### 1. Installation ###
 
@@ -91,10 +92,11 @@ Options (defaults in parentheses):
 
   --RNaseR          CIRIquant output file of RNase R data (required for RNase R correction)
   --bam             Specific hisat2 alignment bam file against reference genome
-  --no-gene         Skipe StringTie estimation of gene abundance
+  --no-gene         Skip StringTie estimation of gene abundance
 ```
 
-A YAML-formated config file is needed for CIRIquant to find software and reference needed. A valid example of config file is demonstrated below.
+A YAML-formated config file is needed for CIRIquant to find software and reference needed.
+A valid example of config file is demonstrated below.
 
 ```YAML
 // Example of config file
@@ -131,10 +133,14 @@ chr1    10000   10099   chr1:10000|10099    .   +
 chr1    31000   31200   chr1:31000|31200    .   -
 ```
 
-**NOTE**: --circ and --tool options can only parse CIRI2 results temporarily, the support for other algorithms is under active development
+**NOTE**: 
+- For now, --circ and --tool options can only parse CIRI2 results.
+- Gene expression values are needed for normalization, do not use `--no-gene` if you need to run DE analysis afterwards. 
+
 ### 3. Output files ###
 
-The main output of CIRIquant is a GTF file, that contains detailed information of BSJ and FSJ reads of circRNAs and annotation of circRNA back-spliced regions in the attribute columns
+The main output of CIRIquant is a GTF file, that contains detailed information of 
+BSJ and FSJ reads of circRNAs and annotation of circRNA back-spliced regions in the attribute columns
 
 Description of each columns's value
 
@@ -187,7 +193,6 @@ The output file `test.gtf` should be located under `test_data/quant/test`
 The demo dataset should take no more than 5 minutes on a personal computer. It has been tested on 
 my PC with Intel i7-8700 processor and 16G of memory, running Ubuntu 18.04 LTS.
 
-
 ### 5. Generate RNase R effect corrected BSJ information ###
 
 In order to remove effect for RNase R treatment, two steps of programs are needed
@@ -195,20 +200,22 @@ In order to remove effect for RNase R treatment, two steps of programs are neede
 1. Run CIRIquant with RNase R treated sample
 2. Use output gtf file in Step1 and run CIRIquant with `--RNaseR` option using output gtf in previous step
 
-The output is in the same format as normal run, however the header line is appended with additional information of RNase R treatment
+The output is in the same format as normal run, however the header line is appended with additional 
+information of RNase R treatment
 
 ### 6. Run differential expression analysis for circRNAs
 
 #### Study without biological replicate ####
 
-For sample without replicate, the differential expression & differential splicing analysis is performed using `CIRI_DE`
+For sample without replicate, the differential expression & differential splicing analysis is 
+performed using `CIRI_DE`
 
 ```
 Usage:
   CIRI_DE [options] -n <control> -c <case> -o <out>
 
   <control>         CIRIquant result of control sample
-  <case>            CIRIquant result of study sample
+  <case>            CIRIquant result of treatment cases
   <out>             Output file
 
 Options (defaults in parentheses):
@@ -228,29 +235,39 @@ The output format `CIRI_DE` is in the format below:
 | 2 | Case_BSJ | number of BSJ reads in case |
 | 3 | Case_FSJ | number of FSJ reads in case |
 | 4 | Case_Ratio | junction ratio in case |
-| 5 | Ctrl_BSJ | number of BSJ reads in case |
-| 6 | Ctrl_FSJ | number of FSJ reads in case |
-| 7 | Ctrl_Ratio | junction ratio  in case |
+| 5 | Ctrl_BSJ | number of BSJ reads in control |
+| 6 | Ctrl_FSJ | number of FSJ reads in control |
+| 7 | Ctrl_Ratio | junction ratio  in control |
 | 8 | DE_score | differential expression score |
 | 9 | DS_score | differential splicing score |
 
 #### Study with biological replicates ####
 
-**NOTE**: Gene abundance are used for normalization analysis, so all samples should run without `--no-gene` option provided
+For study with biological replicates, a customed analysis pipeline of edgeR is recommended and 
+we provide `prep_CIRIquant` to generate matrix of circRNA expression level / junction ratio and `CIRI_DE_replicate` 
+for DE analysis
 
-For study with biological replicates, a customed analysis pipeline of edgeR is recommended, the `prep_CIRIquant.py`
-is provided to generate matrix of circRNA expression level / junction ratio
+**Step1**: Prepare CIRIquant output files
 
-A tab-seperated list of sample IDS and path to CIRIquant output GTF file should be specificed respectively
+One should provide a text file listing sample information and path to CIRIquant output GTF files
 
 ```
-CONTROL1    <PATH_TO_CIRIquant_GTF>
-CONTROL2    <PATH_TO_CIRIquant_GTF>
-CONTROL3    <PATH_TO_CIRIquant_GTF>
-CASE1    <PATH_TO_CIRIquant_GTF>
-CASE2    <PATH_TO_CIRIquant_GTF>
-CASE3    <PATH_TO_CIRIquant_GTF>
+CONTROL1 ./c1/c1.gtf C 1
+CONTROL2 ./c2/c2.gtf C 2
+CONTROL3 ./c3/c3.gtf C 3
+CASE1 ./t1/t1.gtf T 1
+CASE2 ./t2/t2.gtf T 2
+CASE3 ./t3/t3.gtf T 3
 ```
+
+The first three columns is required by default. For paired samples, you could also add a column of subject name.
+
+| column | description |
+|--------|-------------|
+| 1 | sample name |
+| 2 | path to CIRIquant output gtf |
+| 3 | group ("C" for control, "T" for treatment) |
+| 4 | subject (optional, only for paired samples) |
 
 Then, run `prep_CIRIquant` to summarize the circRNA expression profile in all samples
 
@@ -272,48 +289,48 @@ Example:
                  --ratio circRNA_ratio.csv
 ```
 
-These count matrices (CSV files) can then be imported into R for use by DESeq2 and edgeR (using the DESeqDataSetFromMatrix and DGEList functions, respectively).
+These count matrices (CSV files) can then be imported into R for use by DESeq2 and edgeR 
+(using the DESeqDataSetFromMatrix and DGEList functions, respectively).
 
-For example, we provide the demo scripts for differential expression using `edgeR`
+**Step2**: Prepare StringTie output
 
-```R
-library('edgeR')
+The output of StringTie should locate under `output_dir/gene/prefix_out.gtf`. You need to use 
+[prepDE.py](http://ccb.jhu.edu/software/stringtie/dl/prepDE.py) from stringTie to
+generate the gene count matrix for normalization.
 
-# Load raw data
-lib_data <- read.csv("./lib_data.csv", header = T, row.names = 1)
-lib_data <- lib_data[order(lib_data$Patient),]
-gene_data <- read.csv("./gene_counts.csv", header = T, row.names = 1)
-circ_data <- read.csv("./circ_bsj.csv", header = T, row.names = 1)
+For example, one can provide a text file `sample_gene.lst` containing sample IDs and path to StringTie outputs:
 
-# TMM normalization using gene read counts
-gene_DGE <- DGEList(counts = gene_data,
-                    group = lib_data[colnames(gene_data), "Group"])
-gene_DGE <- calcNormFactors(gene_DGE)
-
-# Normalizing circRNA expression matrix
-circ_DGE <- DGEList(counts = circ_data,
-                    group = gene_DGE$samples[, "group"],
-                    lib.size = gene_DGE$samples[, "lib.size"],
-                    norm.factors = gene_DGE$samples[, "norm.factors"])
-
-# Build design matrix
-design <- model.matrix(~factor(lib_data[colnames(circ_data), "Sample"])
-                       + factor(lib_data[colnames(circ_data), "Group"]))
-
-# Estimate dispersion
-circ_DGE <- estimateDisp(circ_DGE, design)
-
-# Calculagte P-value
-circ_fit <- glmFit(circ_DGE, design)
-circ_lrt <- glmLRT(circ_fit)
-topTags(circ_lrt)
-
-# Output DE genes
-o <- order(circ_lrt$table$PValue)
-de <- decideTestsDGE(circ_lrt)
-df <- circ_lrt$table
-df$DE <- decideTestsDGE(circ_lrt)
-df$FDR <- p.adjust(df$PValue, method = "fdr")
-df <- df[o,]
-write.csv(df, file = "./circ_de.csv", quote = FALSE)
+```text
+CONTROL1 ./c1/gene/c1_out.gtf
+CONTROL2 ./c2/gene/c2_out.gtf
+CONTROL3 ./c3/gene/c3_out.gtf
+CASE1 ./t1/gene/t1_out.gtf
+CASE2 ./t2/gene/t2_out.gtf
+CASE3 ./t3/gene/t3_out.gtf
 ```
+
+Then, run `prepDE.py -i sample_gene.lst` and use `gene_count_matrix.csv` generated under current working directory 
+for further analysis.
+
+**Step3**: Differential expression analysis
+
+For differential analysis using `CIRI_DE_replicate`, you need to install a R environment and `edgeR` package from Bioconductor.
+
+```bash
+Usage:
+  CIRI_DE_replicate [options]
+
+  --lib             library information by CIRIquant
+  --bsj             circRNA expression matrix
+  --gene            gene expression matrix
+  --out             output differential expression result
+
+Example:
+  CIRI_DE.R --lib  library_info.csv \
+            --bsj  circRNA_bsj.csv \
+            --gene gene_count_matrix.csv \
+            --out  circRNA_de.csv
+```
+
+Please be noted that the output results is **unfiltered**, 
+and you could apply a more stringent filter on expression values to get a more convincing result.
