@@ -102,7 +102,7 @@ A valid example of config file is demonstrated below.
 // Example of config file
 name: hg19
 tools:
-  bwa: /home/zhangjy/bin/bwa/
+  bwa: /home/zhangjy/bin/bwa
   hisat2: /home/zhangjy/bin/hisat2
   stringtie: /home/zhangjy/bin/stringtie
   samtools: /home/zhangjy/bin/samtools
