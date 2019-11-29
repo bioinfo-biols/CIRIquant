@@ -26,7 +26,7 @@ Softwares:
     bwa
     hisat2
     stringtie
-    samtools>=1.3.1
+    samtools>=1.9
 
 Python packages:
     PyYAML
@@ -41,8 +41,8 @@ Python packages:
 
 **1. Only python2 is supported**  
 
-**2. Samtools version should be higher than `1.3.1`, as older version of samtools may use 
-deprecated parameters in `sort` and other commands**
+**2. Samtools version should be higher than `1.9`, as older version of samtools may use 
+deprecated parameters in `sort` and `index` commands**
 
 ### 1. Installation ###
 

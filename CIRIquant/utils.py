@@ -94,8 +94,8 @@ def check_samtools_version(samtools):
     from commands import getoutput
     from distutils.version import LooseVersion
     version = getoutput('{} --version'.format(samtools).split('\n')[0].split(' ')[1])
-    if version and cmp(LooseVersion(version), LooseVersion('1.3.1')) < 0:
-        sys.exit('samtools version too low, 1.3.1 required')
+    if version and cmp(LooseVersion(version), LooseVersion('1.9')) < 0:
+        sys.exit('samtools version too low, 1.9 required')
     return 1
 
 
