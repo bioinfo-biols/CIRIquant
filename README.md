@@ -1,7 +1,10 @@
 ## CIRIquant ##
 
 [![Build Status](https://travis-ci.com/Kevinzjy/CIRIquant.svg?branch=master)](https://travis-ci.com/Kevinzjy/CIRIquant)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/Kevinzjy/CIRIquant)
 [![The MIT License](https://img.shields.io/badge/license-MIT-orange.svg)](https://github.com/Kevinzjy/CIRIquant/blob/master/LICENSE)
+![GitHub All Releases](https://img.shields.io/github/downloads/Kevinzjy/CIRIquant/total)
+![SourceForge](https://img.shields.io/sourceforge/dm/ciri/CIRIquant)
 
 CIRIquant is a comprehensive analysis pipeline for circRNA detection and quantification in RNA-Seq data
 
