@@ -22,6 +22,10 @@ Maintainer: Jinyang Zhang
 
 The code is released under the MIT License. See the `LICENSE` file for more detail.
 
+### Citing CIRIquant
+
+- Zhang, J., Chen, S., Yang, J. et al. Accurate quantification of circular RNAs identifies extensive circular isoform switching events. Nat Commun 11, 90 (2020) [doi:10.1038/s41467-019-13840-9](https://doi.org/10.1038/s41467-019-13840-9)
+
 ### Prerequisites ###
 
 ```
