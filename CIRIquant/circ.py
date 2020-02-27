@@ -378,7 +378,7 @@ def denovo_worker(circ_chunk):
     return cand_reads
 
 
-def proc_genome_bam(bam_file, thread, circ_info, cand_reads, threshold):
+def proc_genome_bam(bam_file, thread, circ_info, cand_reads, threshold, tmp_dir):
     """
     Extract FSJ reads and check BSJ reads alignment information
 
@@ -390,6 +390,7 @@ def proc_genome_bam(bam_file, thread, circ_info, cand_reads, threshold):
         fsj reads of circRNAs, pair_id -> mate_id -> circ_id
 
     """
+    import cPickle
     LOGGER.info('Detecting FSJ reads from genome alignment file')
 
     sam = pysam.AlignmentFile(bam_file, 'rb')
@@ -399,7 +400,7 @@ def proc_genome_bam(bam_file, thread, circ_info, cand_reads, threshold):
     pool = Pool(thread, genome_initializer, (bam_file, circ_info, cand_reads, threshold))
     jobs = []
     for chrom_info in header:
-        jobs.append(pool.apply_async(genome_worker, (chrom_info['SN'], )))
+        jobs.append(pool.apply_async(genome_worker, (chrom_info['SN'], tmp_dir, )))
     pool.close()
     pool.join()
 
@@ -408,7 +409,11 @@ def proc_genome_bam(bam_file, thread, circ_info, cand_reads, threshold):
     cand_to_genome = []
 
     for job in jobs:
-        chrom_fp_bsj, chrom_fsj, chrom_cand = job.get()
+        tmp = job.get()
+        if tmp is None:
+            continue
+        res = tmp if isinstance(tmp, dict) else cPickle.load(open(tmp, 'rb'))
+        chrom_fp_bsj, chrom_fsj, chrom_cand = res['fp_bsj'], res['fsj_reads'], res['cand_to_genome']
         for pair_id, mate_id in chrom_fp_bsj:
             fp_bsj[pair_id][mate_id] = 1
         for pair_id, mate_id, circ_id in chrom_fsj:
@@ -452,7 +457,7 @@ def genome_initializer(bam_file, circ_info, cand_bsj, threshold):
     BAM, CIRC, BSJ, THRESHOLD = bam_file, circ_info, cand_bsj, threshold
 
 
-def genome_worker(chrom):
+def genome_worker(chrom, tmp_dir):
     """
     Find FSJ reads and re-check BSJ reads
 
@@ -469,9 +474,10 @@ def genome_worker(chrom):
         fsj_reads of circRNAs, (query_name, mate_id, circ_id)
 
     """
+    import cPickle
 
     if chrom not in CIRC:
-        return {}, {}, []
+        return None
 
     sam = pysam.AlignmentFile(BAM, 'rb')
     cand_to_genome = []
@@ -518,7 +524,15 @@ def genome_worker(chrom):
 
     sam.close()
 
-    return fp_bsj, fsj_reads, cand_to_genome
+    res = {'fp_bsj': fp_bsj, 'fsj_reads': fsj_reads, 'cand_to_genome': cand_to_genome}
+
+    res_to_string = cPickle.dumps(res, 0)
+    if sys.getsizeof(res_to_string) > 1024 * 1024 * 1024:
+        pkl_file = "{}/{}.pkl".format(tmp_dir, chrom)
+        cPickle.dump(res, open(pkl_file, "wb"), -1)
+        return pkl_file
+
+    return res
 
 
 def mapping_quality(blocks):
@@ -618,7 +632,7 @@ def proc(log_file, thread, circ_file, hisat_bam, rnaser_file, reads, outdir, pre
 
     # Find BSJ and FSJ informations
     cand_bsj = proc_denovo_bam(denovo_bam, thread, anchor)
-    bsj_reads, fsj_reads = proc_genome_bam(hisat_bam, thread, circ_info, cand_bsj, anchor)
+    bsj_reads, fsj_reads = proc_genome_bam(hisat_bam, thread, circ_info, cand_bsj, anchor, circ_dir)
 
     total_reads, mapped_reads = bam_stat(hisat_bam)
     circ_reads = sum([len(bsj_reads[i]) for i in bsj_reads]) * 2
