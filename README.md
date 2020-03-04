@@ -16,6 +16,7 @@ Maintainer: Jinyang Zhang
 
 ### Release Notes ###
 
+- Version 1.0.1: Fixed bug, sync version number with pypi.org
 - Version 1.0: The first released version of CIRIquant
 
 ### License ###
