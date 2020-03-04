@@ -74,6 +74,12 @@ pip install -r requirements.txt
 
 The package should take approximately 40 seconds to install on a normal computer.
 
+**Update: installation using pip is now available!**
+
+```
+pip install CIRIquant
+```
+
 ### 2. Running CIRIquant For circRNA quantifcation ###
 
 ```
@@ -180,7 +186,7 @@ The attributes containing several pre-defined keys and values:
 
 ### 4. Example Usage ###
 
-Test data set can be retrived from `test_data.tar.gz`, you can replace the path of required software in
+Test data set can be retrived from [test_data.tar.gz](https://github.com/Kevinzjy/CIRIquant/releases/download/v0.2.0/test_data.tar.gz), you can replace the path of required software in
  the `chr1.yml` with your own version
 
 ```
@@ -333,7 +339,7 @@ Usage:
   --out             output differential expression result
 
 Example:
-  CIRI_DE.R --lib  library_info.csv \
+  CIRI_DE_replicate --lib  library_info.csv \
             --bsj  circRNA_bsj.csv \
             --gene gene_count_matrix.csv \
             --out  circRNA_de.csv

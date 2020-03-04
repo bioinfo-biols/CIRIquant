@@ -21,6 +21,7 @@ setup(
     url='https://github.com/Kevinzjy/CIRIquant',
     description='circular RNA quantification pipeline',
     long_description=read('README.md'),
+    long_description_content_type='text/markdown',
     classifiers=[
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python',
