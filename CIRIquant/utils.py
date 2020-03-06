@@ -16,6 +16,14 @@ BWA_INDEX = None
 HISAT_INDEX = None
 
 
+class ConfigError(Exception):
+    pass
+
+
+class PipelineError(Exception):
+    pass
+
+
 def subprocess_setup():
     """
     Python installs a SIGPIPE handler by default. This is usually not what
@@ -33,11 +41,14 @@ def get_thread_num(thread):
     return workers
 
 
-def check_file(file_name):
+def check_file(file_name, is_required=True):
     if os.path.exists(file_name) and os.path.isfile(file_name):
         return os.path.abspath(file_name)
     else:
-        sys.exit('File: {}, not found'.format(file_name))
+        if is_required:
+            raise ConfigError('File: {}, not found'.format(file_name))
+        else:
+            return None
 
 
 def check_dir(dir_name):
@@ -45,7 +56,7 @@ def check_dir(dir_name):
         if os.path.isdir(dir_name):
             pass # Output directory already exists
         else:
-            sys.exit('Directory: {}, clashed with existed files'.format(dir_name))
+            raise ConfigError('Directory: {}, clashed with existed files'.format(dir_name))
     else:
         os.mkdir(dir_name)
     return os.path.abspath(dir_name)
@@ -63,11 +74,11 @@ def check_config(config_file):
 
     # check all tools
     if 'tools' not in config:
-        sys.exit('Path of required software must be provided!')
+        raise ConfigError('Path of required software must be provided!')
 
     for i in 'bwa', 'hisat2', 'stringtie', 'samtools':
         if i not in config['tools']:
-            sys.exit('Tool: {} need to be specificed'.format(i))
+            raise ConfigError('Tool: {} need to be specificed'.format(i))
         globals()[i.upper()] = check_file(config['tools'][i])
 
     # check required software version
@@ -76,17 +87,25 @@ def check_config(config_file):
     # check reference and index
     for i in 'fasta', 'gtf':
         if i not in config['reference']:
-            sys.exit('Reference {} need to be specified'.format(i))
+            raise ConfigError('Reference {} need to be specified'.format(i))
         globals()[i.upper()] = check_file(config['reference'][i])
 
     if 'bwa_index' not in config['reference']:
-        sys.exit('BWA index not found')
+        raise ConfigError('BWA index not found')
     BWA_INDEX = os.path.splitext(check_file(config['reference']['bwa_index'] + '.bwt'))[0]
 
     if 'hisat_index' not in config['reference']:
-        sys.exit('HISAT2 index not found')
-    HISAT_INDEX = os.path.splitext(os.path.splitext(check_file(config['reference']['hisat_index'] + '.1.ht2'))[0])[0]
+        raise ConfigError('HISAT2 index not found')
     
+    short_index = check_file(config['reference']['hisat_index'] + '.1.ht2', is_required=False)
+    long_index = check_file(config['reference']['hisat_index'] + '.1.ht2l', is_required=False)
+    if short_index:
+        HISAT_INDEX = os.path.splitext(os.path.splitext(short_index)[0])[0]
+    elif long_index:
+        HISAT_INDEX = os.path.splitext(os.path.splitext(long_index)[0])[0]
+    else:
+        raise ConfigError('Could not find hisat2 index with suffix: *.[1-8].ht2 or *.[1-8].ht2l, please check your configuration')
+
     return config['name']
 
 
@@ -95,7 +114,7 @@ def check_samtools_version(samtools):
     from distutils.version import LooseVersion
     version = getoutput('{} --version'.format(samtools).split('\n')[0].split(' ')[1])
     if version and cmp(LooseVersion(version), LooseVersion('1.9')) < 0:
-        sys.exit('samtools version too low, 1.9 required')
+        raise ConfigError('samtools version too low, 1.9 required')
     return 1
 
 

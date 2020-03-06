@@ -40,13 +40,16 @@ def align_genome(log_file, thread, reads, outdir, prefix):
 
     with open(log_file, 'a') as log:
         LOGGER.debug(hisat_cmd)
-        subprocess.call(hisat_cmd, shell=True, stderr=log)
+        print(subprocess.call(hisat_cmd, shell=True, stderr=log))
 
         LOGGER.debug(sort_cmd)
         subprocess.call(sort_cmd, shell=True, stderr=log)
 
         LOGGER.debug(index_cmd)
         subprocess.call(index_cmd, shell=True, stderr=log)
+    
+    if os.path.getsize(sorted_bam + '.bai') <= 16:
+        raise utils.PipelineError('Empty hisat2 bam generated, please re-run CIRIquant with -v and check the fastq and hisat2-index.')
 
     return sorted_bam
 
