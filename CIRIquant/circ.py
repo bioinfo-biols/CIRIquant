@@ -892,7 +892,7 @@ def circRNA_attr(gtf_index, circ):
         circ_type['gene_intergenic'] = 1
 
     field = {}
-    if 'exon' in circ_type or 'gene_intergenic':
+    if 'exon' in circ_type:
         field['circ_type'] = 'exon'
     elif 'intron' in circ_type:
         field['circ_type'] = 'intron'
