@@ -290,7 +290,7 @@ def grouper(iterable, n, fillvalue=None):
     return izip_longest(*args, fillvalue=None)
 
 
-def proc_denovo_bam(bam_file, thread, threshold):
+def proc_denovo_bam(bam_file, thread, circ_info, threshold, lib_type):
     """
     Extract BSJ reads in denovo mapped bam file
 
@@ -307,11 +307,11 @@ def proc_denovo_bam(bam_file, thread, threshold):
     header = sam.header['SQ']
     sam.close()
 
-    pool = Pool(thread, denovo_initializer, (bam_file, threshold, ))
+    pool = Pool(thread, denovo_initializer, (bam_file, circ_info, threshold, ))
     jobs = []
     chunk_size = max(500, len(header) / thread + 1)
     for circ_chunk in grouper(header, chunk_size):
-        jobs.append(pool.apply_async(denovo_worker, (circ_chunk, )))
+        jobs.append(pool.apply_async(denovo_worker, (circ_chunk, lib_type, )))
     pool.close()
     pool.join()
 
@@ -326,17 +326,18 @@ def proc_denovo_bam(bam_file, thread, threshold):
 
 BAM = None
 THRESHOLD = None
+CIRC = None
 
 
-def denovo_initializer(infile, threshold):
+def denovo_initializer(infile, circ_info, threshold):
     """
     Initializer for passing bam file name
     """
-    global BAM, THRESHOLD
-    BAM, THRESHOLD = infile, threshold
+    global BAM, CIRC, THRESHOLD
+    BAM, CIRC, THRESHOLD = infile, circ_info, threshold
 
 
-def denovo_worker(circ_chunk):
+def denovo_worker(circ_chunk, lib_type):
     """
     Find candidate reads with junction signal
 
@@ -358,12 +359,33 @@ def denovo_worker(circ_chunk):
         if d is None:
             continue
         circ_id, junc_site = d['SN'], int(d['LN']) / 2
+        contig = circ_id.split(':')[0]
+        parser = CIRC[contig][circ_id]
 
         tmp_cand = []
         circ_reads = defaultdict(dict)
         for read in sam.fetch(circ_id, multiple_iterators=True):
             if read.is_unmapped or read.is_secondary or read.is_supplementary:
                 continue
+
+            read_strand = '-' if read.is_reverse else '+'
+            if lib_type == '0':
+                pass
+            elif lib_type == '1':
+                if read.is_read1 - read.is_read2 > 0:
+                    if read_strand != parser.strand:
+                        continue
+                else:
+                    if read_strand == parser.strand:
+                        continue
+            elif lib_type == '2':
+                if read.is_read1 - read.is_read2 > 0:
+                    if read_strand == parser.strand:
+                        continue
+                else:
+                    if read_strand != parser.strand:
+                        continue
+
             circ_reads[query_prefix(read.query_name)][read.is_read1 - read.is_read2] = 1
             if read.mapping_quality <= 10:
                 continue
@@ -445,7 +467,6 @@ def proc_genome_bam(bam_file, thread, circ_info, cand_reads, threshold, tmp_dir)
     return circ_bsj, circ_fsj
 
 
-CIRC = None
 BSJ = None
 
 
@@ -598,7 +619,7 @@ def query_prefix(query_name):
     return prefix
 
 
-def proc(log_file, thread, circ_file, hisat_bam, rnaser_file, reads, outdir, prefix, anchor):
+def proc(log_file, thread, circ_file, hisat_bam, rnaser_file, reads, outdir, prefix, anchor, lib_type):
     """
     Build pseudo circular reference index and perform reads re-alignment
     Extract BSJ and FSJ reads from alignment results
@@ -631,7 +652,7 @@ def proc(log_file, thread, circ_file, hisat_bam, rnaser_file, reads, outdir, pre
     LOGGER.debug('De-novo bam: {}'.format(denovo_bam))
 
     # Find BSJ and FSJ informations
-    cand_bsj = proc_denovo_bam(denovo_bam, thread, anchor)
+    cand_bsj = proc_denovo_bam(denovo_bam, thread, circ_info, anchor, lib_type)
     bsj_reads, fsj_reads = proc_genome_bam(hisat_bam, thread, circ_info, cand_bsj, anchor, circ_dir)
 
     total_reads, mapped_reads = bam_stat(hisat_bam)
