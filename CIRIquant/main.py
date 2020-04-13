@@ -34,6 +34,9 @@ def main():
                         help='Number of CPU threads, default: 4', )
     parser.add_argument('-a', '--anchor', dest='anchor', default=5, metavar='INT',
                         help='Minimum anchor length for junction alignment, default: 5', )
+    parser.add_argument('-l', '--libary-type', dest='library_type', metavar='INT', default=0,
+                        help='Library type, 0: unstranded, 1: read1 match the sense strand,'
+                             '2: read1 match the antisense strand, default: 0', )
 
     parser.add_argument('-v', '--verbose', dest='verbosity', default=False, action='store_true',
                         help='Run in debugging mode', )
@@ -46,7 +49,7 @@ def main():
     parser.add_argument('--bed', dest='bed', metavar='FILE', default=None,
                         help='bed file for putative circRNAs (optional)', )
     parser.add_argument('--circ', dest='circ', metavar='FILE', default=None,
-                        help='circRNA prediction results', )
+                        help='circRNA prediction results from other softwares', )
     parser.add_argument('--tool', dest='tool', metavar='TOOL', default=None,
                         help='circRNA prediction tool, required if --circ is provided', )
 
@@ -70,6 +73,11 @@ def main():
         reads = [check_file(args.mate1), check_file(args.mate2)]
     else:
         sys.exit('No input files specified, please see manual for detailed information')
+
+    lib_type = args.library_type
+    if lib_type not in ['0', '1', '2']:
+        sys.exit('Wrong library type, please check your command.\nSupported types:\n0 - unstranded;\n'
+                 '1 - read1 match the sense strand;\n2 - read1 match the antisense strand;')
 
     # check configuration
     if args.config_file:
@@ -140,10 +148,10 @@ def main():
     if bed_file:
         logger.info('Using user-provided circRNA bed file: {}'.format(bed_file))
     else:
-        if circ_file or args.tool:
-            if circ_file and args.tool:
-                logger.info('Using predicted circRNA results from {}: {}'.format(args.tool, circ_file))
-                circ_parser = CIRCparser(circ_file, args.tool)
+        if circ_file or circ_tool:
+            if circ_file and circ_tool:
+                logger.info('Using predicted circRNA results from {}: {}'.format(circ_tool, circ_file))
+                circ_parser = CIRCparser(circ_file, circ_tool)
             else:
                 sys.exit('--circ and --tool must be provided in the same time!')
         else:
@@ -156,9 +164,13 @@ def main():
         circ_parser.convert(bed_file)
 
     # Step4: estimate circRNA expression level
-    out_file = circ.proc(log_file, thread, bed_file, hisat_bam, rnaser_file, reads, outdir, prefix, anchor)
+    out_file = circ.proc(log_file, thread, bed_file, hisat_bam, rnaser_file, reads, outdir, prefix, anchor, lib_type)
+
+    # Remove temporary files
+    pipeline.clean_tmp(outdir, prefix)
 
     logger.info('circRNA Expression profile: {}'.format(os.path.basename(out_file)))
+
     logger.info('Finished!')
 
 

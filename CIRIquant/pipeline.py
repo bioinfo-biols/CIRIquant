@@ -40,7 +40,7 @@ def align_genome(log_file, thread, reads, outdir, prefix):
 
     with open(log_file, 'a') as log:
         LOGGER.debug(hisat_cmd)
-        print(subprocess.call(hisat_cmd, shell=True, stderr=log))
+        subprocess.call(hisat_cmd, shell=True, stderr=log)
 
         LOGGER.debug(sort_cmd)
         subprocess.call(sort_cmd, shell=True, stderr=log)
@@ -130,3 +130,15 @@ def convert_bed(ciri_file):
             strand = content[10]
             out.write('\t'.join([chrom, start, end, '{}:{}|{}'.format(chrom, start, end), '.', strand]) + '\n')
     return out_file
+
+
+def clean_tmp(outdir, prefix):
+    tmp_files = [
+        '{}/circ/{}_unmapped.sam'.format(outdir, prefix),
+        '{}/circ/{}_denovo.bam'.format(outdir, prefix),
+        '{}/align/{}.bam'.format(outdir, prefix),
+    ]
+    for f in tmp_files:
+        if os.path.exists(f) and os.path.isfile(f):
+            os.remove(f)
+    return 0
