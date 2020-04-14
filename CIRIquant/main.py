@@ -129,14 +129,14 @@ def main():
     os.chdir(outdir)
     logger.info('Input reads: ' + ','.join([os.path.basename(args.mate1), os.path.basename(args.mate2)]))
 
-    if lib_type == '0':
+    if lib_type == 0:
         lib_name = 'unstranded'
-    elif lib_type == '1':
+    elif lib_type == 1:
         lib_name = 'ScriptSeq'
-    elif lib_type == '2':
+    elif lib_type == 2:
         lib_name = 'TAKARA SMARTer'
     else:
-        pass
+        sys.exit('Unsupported library type, please check the manual for instructions.')
 
     logger.info('Library type: {}'.format(lib_name))
     logger.info('Output directory: {}, Output prefix: {}'.format(outdir, prefix))
