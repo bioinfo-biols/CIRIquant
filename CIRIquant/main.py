@@ -74,8 +74,13 @@ def main():
     else:
         sys.exit('No input files specified, please see manual for detailed information')
 
-    lib_type = args.library_type
-    if lib_type not in ['0', '1', '2']:
+    try:
+        lib_type = int(args.library_type)
+    except ValueError:
+        sys.exit('Wrong library type, please check your command.\nSupported types:\n0 - unstranded;\n'
+                 '1 - read1 match the sense strand;\n2 - read1 match the antisense strand;')
+
+    if lib_type not in [0, 1, 2]:
         sys.exit('Wrong library type, please check your command.\nSupported types:\n0 - unstranded;\n'
                  '1 - read1 match the sense strand;\n2 - read1 match the antisense strand;')
 

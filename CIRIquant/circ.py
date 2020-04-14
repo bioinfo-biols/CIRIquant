@@ -369,16 +369,16 @@ def denovo_worker(circ_chunk, lib_type):
                 continue
 
             read_strand = '-' if read.is_reverse else '+'
-            if lib_type == '0':
+            if lib_type == 0:
                 pass
-            elif lib_type == '1':
+            elif lib_type == 1:
                 if read.is_read1 - read.is_read2 > 0:
                     if read_strand != parser.strand:
                         continue
                 else:
                     if read_strand == parser.strand:
                         continue
-            elif lib_type == '2':
+            elif lib_type == 2:
                 if read.is_read1 - read.is_read2 > 0:
                     if read_strand == parser.strand:
                         continue
