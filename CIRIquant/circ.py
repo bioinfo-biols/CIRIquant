@@ -828,7 +828,7 @@ class GTFParser(object):
         Parsing attribute column in gtf file
         """
         field = {}
-        for attr_values in [re.split(r'\s+', i.strip()) for i in self.attr_string.split(';')[:-1]]:
+        for attr_values in [re.split(r'[\s=]+', i.strip()) for i in self.attr_string.split(';')[:-1]]:
             key, value = attr_values[0], attr_values[1:]
             field[key] = ' '.join(value).strip('"')
         return field

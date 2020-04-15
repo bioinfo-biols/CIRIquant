@@ -245,6 +245,9 @@ Arguments:
 				} elsif ($line[8] =~ /gene=\w+;.*transcript_id=\w+\.*/) {
 					$gff += 2;
 					last;
+				} elsif ($line[8] =~ /gene_id=\w+.*;transcript_id=\w+/) {
+					$gff += 3;
+					last;
 				}
 			}
 			if ( $line_count >= $test_line and $gff == 1 ) {
@@ -447,6 +450,28 @@ Arguments:
 					my @line = split /\t/;
 					if ( defined $line[2] and $line[2] eq 'exon' ) {
 						if ($line[8] =~ /;gene=(\w+)/) {
+							my $gene_ID = $1;
+							$exon_start{$line[0]}{$line[3]}{$gene_ID} ++;
+							$exon_end{$line[0]}{$line[4]}{$gene_ID} ++;
+							if ( defined $pre_gene and $pre_gene ne $gene_ID ) {
+								&split_transcript($pre_gene, @gene_anno);
+								@gene_anno = ();
+							}
+							push @gene_anno, $_;
+							$pre_gene = $gene_ID;
+						} else {
+							die "CIRI cannot understand $anno_gtf.";
+						}
+					}
+				}
+				&split_transcript($pre_gene, @gene_anno);
+			} elsif ($gff == 4) {
+				open ANNO, "<", $anno_gtf or die "cannot open the annotation file: $!";
+				while (<ANNO>) {
+					chomp;
+					my @line = split /\t/;
+					if ( defined $line[2] and $line[2] eq 'exon' ) {
+						if ($line[8] =~ /;gene_id=(\w+)/) {
 							my $gene_ID = $1;
 							$exon_start{$line[0]}{$line[3]}{$gene_ID} ++;
 							$exon_end{$line[0]}{$line[4]}{$gene_ID} ++;
