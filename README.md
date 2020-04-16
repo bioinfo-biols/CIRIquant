@@ -21,9 +21,8 @@ Maintainer: Jinyang Zhang
 
 ### Release Notes ###
 
-- Version 1.0.2: Fixed bug in circRNA annotation
-- Version 1.0.1: Fixed bug, sync version number with pypi.org
-- Version 1.0: The first released version of CIRIquant
+- Version 1.1: Added support for stranded library and GFF3 format input.
+- Version 1.0: The first released version of CIRIquant.
 
 ### License ###
 
