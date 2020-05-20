@@ -86,6 +86,8 @@ def main():
     with open(sample_lst, 'r') as f:
         for line in f:
             content = line.rstrip().split()
+            if len(content) == 0:
+                continue
             sample, sample_file, group = content[0], content[1], content[2]
             sample_header, sample_data, sample_info = load_gtf(sample_file)
             all_sample[sample] = sample_header
