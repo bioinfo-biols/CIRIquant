@@ -77,7 +77,7 @@ circ_lrt <- glmLRT(circ_fit)
 
 circ_df <- circ_lrt$table
 circ_order <- order(circ_lrt$table$PValue)
-circ_df$DE <- decideTestsDGE(circ_lrt)
+circ_df$DE <- as.vector(decideTestsDGE(circ_lrt))
 circ_df <- circ_df[circ_order, ]
 circ_df$FDR <- p.adjust(circ_df$PValue, method="fdr")
 write.csv(circ_df, file=opt$out, quote = FALSE)
