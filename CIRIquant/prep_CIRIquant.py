@@ -9,7 +9,7 @@ from version import __version__
 
 LOGGER = logging.getLogger('prep_CIRIquant')
 CIRC = namedtuple('CIRC', 'bsj fsj ratio rnaser_bsj rnaser_fsj')
-INFO = namedtuple('INFO', 'circ_type gene_id gene_name gene_type')
+INFO = namedtuple('INFO', 'strand circ_type gene_id gene_name gene_type')
 
 
 def load_gtf(in_file):
@@ -36,6 +36,7 @@ def load_gtf(in_file):
                 float(tmp_parser.attr['rnaser_fsj']) if 'rnaser_fsj' in tmp_parser.attr else None,
             )
             circ_info[tmp_parser.attr['circ_id']] = INFO(
+                tmp_parser.strand,
                 tmp_parser.attr['circ_type'],
                 tmp_parser.attr['gene_id'] if 'gene_id' in tmp_parser.attr else 'NA',
                 tmp_parser.attr['gene_name'] if 'gene_name' in tmp_parser.attr else 'NA',
@@ -103,10 +104,10 @@ def main():
 
     # library information and circRNA annotation
     with open(lib_file, 'w') as lib_out, open(info_file, 'w') as info_out:
-        info_out.write('circ_id,circ_type,gene_id,gene_name,gene_type\n')
+        info_out.write('circ_id,strand,circ_type,gene_id,gene_name,gene_type\n')
         for circ_id in circ_ids:
             tmp_circ = all_circ[circ_id]
-            tmp_line = [circ_id, tmp_circ.circ_type, tmp_circ.gene_id, tmp_circ.gene_name, tmp_circ.gene_type]
+            tmp_line = [circ_id, tmp_circ.strand,tmp_circ.circ_type, tmp_circ.gene_id, tmp_circ.gene_name, tmp_circ.gene_type]
             info_out.write(','.join(['"{}"'.format(x) for x in tmp_line]) + '\n')
 
         if is_paired == 0:
