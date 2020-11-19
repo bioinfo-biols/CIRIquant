@@ -34,7 +34,7 @@ def main():
                         help='Number of CPU threads, default: 4', )
     parser.add_argument('-a', '--anchor', dest='anchor', default=5, metavar='INT',
                         help='Minimum anchor length for junction alignment, default: 5', )
-    parser.add_argument('-l', '--libary-type', dest='library_type', metavar='INT', default=0,
+    parser.add_argument('-l', '--library-type', dest='library_type', metavar='INT', default=0,
                         help='Library type, 0: unstranded, 1: read1 match the sense strand,'
                              '2: read1 match the antisense strand, default: 0', )
 
