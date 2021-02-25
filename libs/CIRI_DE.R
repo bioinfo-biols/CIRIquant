@@ -31,9 +31,9 @@ if (is.na(opt$lib) || is.na(opt$bsj) || is.na(opt$gene) || is.na(opt$out)) {
 
 # Load data
 lib_mtx <- read.csv(opt$lib, row.names = 1)
-gene_mtx <- read.csv(opt$gene, row.names = 1)
+gene_mtx <- read.csv(opt$gene, row.names = 1, check.names=FALSE)
 gene_mtx <- gene_mtx[,rownames(lib_mtx)]
-bsj_mtx <- read.csv(opt$bsj, row.names = 1)
+bsj_mtx <- read.csv(opt$bsj, row.names = 1, check.names=FALSE)
 
 gene_DGE <- DGEList(counts = gene_mtx, group = lib_mtx$Group)
 gene_idx <- filterByExpr(gene_DGE)
