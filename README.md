@@ -1,4 +1,4 @@
-## CIRIquant ##
+## CIRIquant
 
 [![Build Status](https://staging.travis-ci.com/bioinfo-biols/CIRIquant.svg?branch=master)](https://staging.travis-ci.com/bioinfo-biols/CIRIquant)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/bioinfo-biols/CIRIquant)
@@ -9,22 +9,22 @@
 
 CIRIquant is a comprehensive analysis pipeline for circRNA detection and quantification in RNA-Seq data
 
-### Documentation ### 
+### Documentation
 
 Documentation is available online at [https://ciriquant-cookbook.readthedocs.io/en/latest/index.html](https://ciriquant-cookbook.readthedocs.io/en/latest/index.html)
 
-### Author ###
+### Author
 
 Authors: Jinyang Zhang(zhangjinyang@biols.ac.cn), Fangqing Zhao(zhfq@biols.ac.cn)
 
 Maintainer: Jinyang Zhang
 
-### Release Notes ###
+### Release Notes
 
 - Version 1.1: Added support for stranded library and GFF3 format input.
 - Version 1.0: The first released version of CIRIquant.
 
-### License ###
+### License
 
 The code is released under the MIT License. See the `LICENSE` file for more detail.
 
