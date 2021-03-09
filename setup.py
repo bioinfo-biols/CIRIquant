@@ -18,7 +18,7 @@ setup(
     author_email='zhangjinyang@biols.ac.cn',
     maintainer='Jinyang Zhang',
     maintainer_email='zhangjinyang@biols.ac.cn',
-    url='https://github.com/Kevinzjy/CIRIquant',
+    url='https://github.com/bioinfo-biols/CIRIquant',
     description='circular RNA quantification pipeline',
     long_description=read('README.md'),
     long_description_content_type='text/markdown',

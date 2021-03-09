@@ -1,9 +1,9 @@
 ## CIRIquant ##
 
-[![Build Status](https://travis-ci.com/Kevinzjy/CIRIquant.svg?branch=master)](https://travis-ci.com/Kevinzjy/CIRIquant)
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/Kevinzjy/CIRIquant)
-[![The MIT License](https://img.shields.io/badge/license-MIT-orange.svg)](https://github.com/Kevinzjy/CIRIquant/blob/master/LICENSE)
-![GitHub All Releases](https://img.shields.io/github/downloads/Kevinzjy/CIRIquant/total)
+[![Build Status](https://staging.travis-ci.com/bioinfo-biols/CIRIquant.svg?branch=master)](https://staging.travis-ci.com/bioinfo-biols/CIRIquant)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/bioinfo-biols/CIRIquant)
+[![The MIT License](https://img.shields.io/badge/license-MIT-orange.svg)](https://github.com/bioinfo-biols/CIRIquant/blob/master/LICENSE)
+![GitHub All Releases](https://img.shields.io/github/downloads/bioinfo-biols/CIRIquant/total)
 ![SourceForge](https://img.shields.io/sourceforge/dm/ciri/CIRIquant)
 ![Readthedoc](https://readthedocs.org/projects/ciriquant-cookbook/badge/?version=latest)
 

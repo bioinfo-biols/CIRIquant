@@ -15,7 +15,7 @@ install:
   - conda install -c bioconda samtools hisat2 stringtie bwa
   - travis_retry pip install -r requirements.txt
   - python setup.py install
-  - wget https://github.com/Kevinzjy/CIRIquant/releases/download/v0.1.0/test_data_prebuilt.tar.gz
+  - wget https://github.com/bioinfo-biols/CIRIquant/releases/download/v0.1.0/test_data_prebuilt.tar.gz
   - tar zxvf test_data_prebuilt.tar.gz
 
 script:
