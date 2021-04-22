@@ -5,13 +5,13 @@
 [![The MIT License](https://img.shields.io/badge/license-MIT-orange.svg)](https://github.com/bioinfo-biols/CIRIquant/blob/master/LICENSE)
 ![GitHub All Releases](https://img.shields.io/github/downloads/bioinfo-biols/CIRIquant/total)
 ![SourceForge](https://img.shields.io/sourceforge/dm/ciri/CIRIquant)
-![Readthedoc](https://readthedocs.org/projects/ciriquant-cookbook/badge/?version=latest)
+[![Documentation Status](https://readthedocs.org/projects/ciri-cookbook/badge/?version=latest)](https://ciri-cookbook.readthedocs.io/en/latest/?badge=latest)
 
 CIRIquant is a comprehensive analysis pipeline for circRNA detection and quantification in RNA-Seq data
 
 ### Documentation
 
-Documentation is available online at [https://ciriquant-cookbook.readthedocs.io/en/latest/index.html](https://ciriquant-cookbook.readthedocs.io/en/latest/index.html)
+Documentation is available online at [https://ciri-cookbook.readthedocs.io/en/latest/](https://ciri-cookbook.readthedocs.io/en/latest/CIRIquant_0_home.html#)
 
 ### Author
 
