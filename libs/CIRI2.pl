@@ -239,7 +239,7 @@ Arguments:
 			$line_count ++;
 			my @line = split /\t/;
 			if ($line[2] eq 'exon') {
-				if ($line[8] =~ /^Parent=\w+\.\w*.*/) {
+				if ($line[8] =~ /Parent=\w+\.\w*.*/) {
 					$gff ++;
 					last;
 				} elsif ($line[8] =~ /gene=\w+;.*transcript_id=\w+\.*/) {
@@ -427,7 +427,7 @@ Arguments:
 					chomp;
 					my @line = split /\t/;
 					if ( defined $line[2] and $line[2] eq 'exon' ) {
-						if ($line[8] =~ /^Parent=((\w+)\.\w*).*/) {
+						if ($line[8] =~ /Parent=((\w+)\.\w*).*/) {
 							my $gene_ID = $2;
 							$exon_start{$line[0]}{$line[3]}{$gene_ID} ++;
 							$exon_end{$line[0]}{$line[4]}{$gene_ID} ++;
