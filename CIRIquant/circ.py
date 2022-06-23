@@ -400,7 +400,7 @@ def denovo_worker(circ_chunk, lib_type):
     return cand_reads
 
 
-def proc_genome_bam(bam_file, thread, circ_info, cand_reads, threshold, tmp_dir):
+def proc_genome_bam(bam_file, thread, circ_info, cand_reads, threshold, tmp_dir, is_no_fsj):
     """
     Extract FSJ reads and check BSJ reads alignment information
 
@@ -422,7 +422,7 @@ def proc_genome_bam(bam_file, thread, circ_info, cand_reads, threshold, tmp_dir)
     pool = Pool(thread, genome_initializer, (bam_file, circ_info, cand_reads, threshold))
     jobs = []
     for chrom_info in header:
-        jobs.append(pool.apply_async(genome_worker, (chrom_info['SN'], tmp_dir, )))
+        jobs.append(pool.apply_async(genome_worker, (chrom_info['SN'], tmp_dir, is_no_fsj, )))
     pool.close()
     pool.join()
 
@@ -478,7 +478,7 @@ def genome_initializer(bam_file, circ_info, cand_bsj, threshold):
     BAM, CIRC, BSJ, THRESHOLD = bam_file, circ_info, cand_bsj, threshold
 
 
-def genome_worker(chrom, tmp_dir):
+def genome_worker(chrom, tmp_dir, is_no_fsj):
     """
     Find FSJ reads and re-check BSJ reads
 
@@ -520,28 +520,31 @@ def genome_worker(chrom, tmp_dir):
         if qual_filter or linear_filter or align_filter:
             fp_bsj.append((read.query_name, read.is_read1 - read.is_read2))
 
-    fsj_reads = []
-    for circ_id, parser in CIRC[chrom].iteritems():
-        # FSJ across start site
-        for read in sam.fetch(region='{0}:{1}-{1}'.format(chrom, parser.start)):
-            if read.is_unmapped or read.is_supplementary:
-                continue
-            if read.mapping_quality <= 10:
-                continue
-            if not read.get_overlap(parser.start - 1, parser.start + THRESHOLD - 1) >= THRESHOLD:
-                continue
-            if is_mapped(read.cigartuples[0]) and is_mapped(read.cigartuples[-1]):
-                fsj_reads.append((read.query_name, read.is_read1 - read.is_read2, circ_id))
+    if is_no_fsj:
+        fsj_reads = []
+    else:
+        fsj_reads = []
+        for circ_id, parser in CIRC[chrom].iteritems():
+            # FSJ across start site
+            for read in sam.fetch(region='{0}:{1}-{1}'.format(chrom, parser.start)):
+                if read.is_unmapped or read.is_supplementary:
+                    continue
+                if read.mapping_quality <= 10:
+                    continue
+                if not read.get_overlap(parser.start - 1, parser.start + THRESHOLD - 1) >= THRESHOLD:
+                    continue
+                if is_mapped(read.cigartuples[0]) and is_mapped(read.cigartuples[-1]):
+                    fsj_reads.append((read.query_name, read.is_read1 - read.is_read2, circ_id))
 
-        for read in sam.fetch(region='{0}:{1}-{1}'.format(chrom, parser.end)):
-            if read.is_unmapped or read.is_supplementary:
-                continue
-            if read.mapping_quality <= 10:
-                continue
-            if not read.get_overlap(parser.end - THRESHOLD, parser.end) >= THRESHOLD:
-                continue
-            if is_mapped(read.cigartuples[0]) and is_mapped(read.cigartuples[-1]):
-                fsj_reads.append((read.query_name, read.is_read1 - read.is_read2, circ_id))
+            for read in sam.fetch(region='{0}:{1}-{1}'.format(chrom, parser.end)):
+                if read.is_unmapped or read.is_supplementary:
+                    continue
+                if read.mapping_quality <= 10:
+                    continue
+                if not read.get_overlap(parser.end - THRESHOLD, parser.end) >= THRESHOLD:
+                    continue
+                if is_mapped(read.cigartuples[0]) and is_mapped(read.cigartuples[-1]):
+                    fsj_reads.append((read.query_name, read.is_read1 - read.is_read2, circ_id))
 
     sam.close()
 
@@ -619,7 +622,7 @@ def query_prefix(query_name):
     return prefix
 
 
-def proc(log_file, thread, circ_file, hisat_bam, rnaser_file, reads, outdir, prefix, anchor, lib_type):
+def proc(log_file, thread, circ_file, hisat_bam, rnaser_file, reads, outdir, prefix, anchor, lib_type, is_no_fsj, bsj_file):
     """
     Build pseudo circular reference index and perform reads re-alignment
     Extract BSJ and FSJ reads from alignment results
@@ -653,7 +656,10 @@ def proc(log_file, thread, circ_file, hisat_bam, rnaser_file, reads, outdir, pre
 
     # Find BSJ and FSJ informations
     cand_bsj = proc_denovo_bam(denovo_bam, thread, circ_info, anchor, lib_type)
-    bsj_reads, fsj_reads = proc_genome_bam(hisat_bam, thread, circ_info, cand_bsj, anchor, circ_dir)
+    bsj_reads, fsj_reads = proc_genome_bam(hisat_bam, thread, circ_info, cand_bsj, anchor, circ_dir, is_no_fsj)
+    if bsj_file is not None:
+        LOGGER.info("Writing BSJ reads id to {}".format(bsj_file))
+        output_bsj_ids(bsj_reads, bsj_file)
 
     total_reads, mapped_reads = bam_stat(hisat_bam)
     circ_reads = sum([len(bsj_reads[i]) for i in bsj_reads]) * 2
@@ -700,6 +706,14 @@ def expression_level(circ_info, bsj_reads, fsj_reads):
             circ_exp[circ_id] = {'bsj': bsj, 'fsj': fsj, 'ratio': junc}
 
     return circ_exp
+
+
+def output_bsj_ids(bsj_reads, bsj_file):
+    with open(bsj_file, 'w') as out:
+        for circ_id in bsj_reads:
+            for read_id in bsj_reads[circ_id]:
+                out.write("{}\t{}\n".format(read_id, circ_id))
+    return 0
 
 
 def bam_stat(bam_file):

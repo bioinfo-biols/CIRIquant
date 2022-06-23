@@ -65,6 +65,12 @@ def main():
     parser.add_argument('--no-gene', dest='gene_exp', default=False, action='store_true',
                         help='Skip stringtie estimation for gene abundance', )
 
+    # skip FSJ calculation
+    parser.add_argument('--no-fsj', dest='no_fsj', default=False, action='store_true',
+                        help='Skip FSJ extraction to reduce run time', )
+    parser.add_argument('--bsj-file', dest='bsj_read_file', metavar='FILE', default=None,
+                        help='output BSJ read IDs to file (optional)')
+
     args = parser.parse_args()
 
     """Check required parameters"""
@@ -180,7 +186,10 @@ def main():
         circ_parser.convert(bed_file)
 
     # Step4: estimate circRNA expression level
-    out_file = circ.proc(log_file, thread, bed_file, hisat_bam, rnaser_file, reads, outdir, prefix, anchor, lib_type)
+    if args.no_fsj:
+        logger.info('Skipping FSJ reads extraction')
+    out_file = circ.proc(log_file, thread, bed_file, hisat_bam, rnaser_file, reads, outdir, prefix, anchor, lib_type,
+                         args.no_fsj, args.bsj_read_file)
 
     # Remove temporary files
     pipeline.clean_tmp(outdir, prefix)
