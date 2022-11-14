@@ -101,7 +101,7 @@ def run_bwa(log_file, thread, cand_reads, outdir, prefix):
     return bwa_sam
 
 
-def run_ciri(log_file, thread, bwa_sam, outdir, prefix):
+def run_ciri2(log_file, thread, bwa_sam, outdir, prefix):
     LOGGER.info('Running CIRI2 for circRNA detection ..')
     ciri_file = '{}/circ/{}.ciri'.format(outdir, prefix)
     ciri_cmd = 'CIRI2.pl -I {} -O {} -F {} -A {} -0 -T {} -G {}'.format(
@@ -119,6 +119,25 @@ def run_ciri(log_file, thread, bwa_sam, outdir, prefix):
 
     return ciri_file
 
+def run_ciri3(log_file, thread, bwa_sam, outdir, prefix, ciri3_exec):
+    LOGGER.info('Running CIRI2 for circRNA detection ..')
+    ciri_file = '{}/circ/{}.ciri'.format(outdir, prefix)
+    ciri_cmd = '{} -jar -Xmx20480m {} -I {} -O {} -F {} -A {} -0 -T {} -G {}'.format(
+        utils.JAVA,
+        ciri3_exec,
+        bwa_sam,
+        ciri_file,
+        utils.FASTA,
+        utils.GTF,
+        thread,
+        log_file,
+    )
+
+    with open(log_file, 'a') as log:
+        LOGGER.debug(ciri_cmd)
+        subprocess.call(ciri_cmd, shell=True, stderr=log, stdout=log)
+
+    return ciri_file
 
 def convert_bed(ciri_file):
     out_file = ciri_file + '.bed'

@@ -130,6 +130,7 @@ def main():
     lib_path = os.path.dirname(os.path.split(os.path.realpath(__file__))[0]) + '/libs'
     os.environ['PATH'] = lib_path + ':' + os.environ['PATH']
     os.chmod(lib_path + '/CIRI2.pl', 0o755)
+    ciri3_exec = lib_path + '/CIRI3.jar'
 
     """Start Running"""
     os.chdir(outdir)
@@ -179,7 +180,8 @@ def main():
         else:
             logger.info('No circRNA information provided, run CIRI2 for junction site prediction ..')
             bwa_sam = pipeline.run_bwa(log_file, thread, reads, outdir, prefix)
-            ciri_file = pipeline.run_ciri(log_file, thread, bwa_sam, outdir, prefix)
+            # ciri_file = pipeline.run_ciri2(log_file, thread, bwa_sam, outdir, prefix)
+            ciri_file = pipeline.run_ciri3(log_file, thread, bwa_sam, outdir, prefix, ciri3_exec)
             circ_parser = CIRCparser(ciri_file, 'CIRI2')
 
         bed_file = '{}/{}.bed'.format(outdir, prefix)

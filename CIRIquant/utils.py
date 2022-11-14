@@ -9,6 +9,7 @@ BWA = None
 HISAT2 = None
 STRINGTIE = None
 SAMTOOLS = None
+JAVA = None
 
 FASTA = None
 GTF = None
@@ -76,7 +77,7 @@ def check_config(config_file):
     if 'tools' not in config:
         raise ConfigError('Path of required software must be provided!')
 
-    for i in 'bwa', 'hisat2', 'stringtie', 'samtools':
+    for i in 'bwa', 'hisat2', 'stringtie', 'samtools', 'java':
         if i not in config['tools']:
             raise ConfigError('Tool: {} need to be specificed'.format(i))
         globals()[i.upper()] = check_file(config['tools'][i])
