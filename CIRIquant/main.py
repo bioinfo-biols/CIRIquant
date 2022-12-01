@@ -129,7 +129,7 @@ def main():
     # Add lib to PATH
     lib_path = os.path.dirname(os.path.split(os.path.realpath(__file__))[0]) + '/libs'
     os.environ['PATH'] = lib_path + ':' + os.environ['PATH']
-    os.chmod(lib_path + '/CIRI2.pl', 0o755)
+    #os.chmod(lib_path + '/CIRI2.pl', 0o755)
 
     """Start Running"""
     os.chdir(outdir)
