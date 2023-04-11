@@ -1,6 +1,8 @@
 #! /usr/bin/env python
 # -*- encoding:utf-8 -*=
 import os
+from commands import getstatusoutput
+import subprocess
 import sys
 import logging
 LOGGER = logging.getLogger('CIRIquant')
@@ -10,6 +12,7 @@ HISAT2 = None
 STRINGTIE = None
 SAMTOOLS = None
 JAVA = None
+PERL = None
 
 FASTA = None
 GTF = None
@@ -77,10 +80,15 @@ def check_config(config_file):
     if 'tools' not in config:
         raise ConfigError('Path of required software must be provided!')
 
-    for i in 'bwa', 'hisat2', 'stringtie', 'samtools', 'java':
+    for i in 'bwa', 'hisat2', 'stringtie', 'samtools', 'java', 'perl':
         if i not in config['tools']:
-            raise ConfigError('Tool: {} need to be specificed'.format(i))
-        globals()[i.upper()] = check_file(config['tools'][i])
+            stat, ret = getstatusoutput('which ' + i)
+            if stat != 0:
+                raise ConfigError('Tool: {} need to be specificed'.format(i))
+            else:
+                globals()[i.upper()] = ret
+        else:
+            globals()[i.upper()] = check_file(config['tools'][i])
 
     # check required software version
     check_samtools_version(config['tools']['samtools'])

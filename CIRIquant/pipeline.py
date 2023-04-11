@@ -12,27 +12,18 @@ def align_genome(log_file, thread, reads, outdir, prefix):
     # mapping to reference genome
     align_dir = outdir + '/align'
     utils.check_dir(align_dir)
-    hisat_bam = '{}/{}.bam'.format(align_dir, prefix)
-    hisat_cmd = '{} -p {} --dta -q -x {} -1 {} -2 {} -t | {} view -bS > {}'.format(
+    sorted_bam = '{}/{}.sorted.bam'.format(align_dir, prefix)
+    hisat_cmd = '{0} -p {1} --dta -q -x {2} -1 {3} -2 {4} -t --new-summary | {5} sort -o {6} --threads {1} -'.format(
         utils.HISAT2,
         thread,
         utils.HISAT_INDEX,
         reads[0],
         reads[1],
         utils.SAMTOOLS,
-        hisat_bam
+        sorted_bam
     )
 
-    # sort hisat2 bam
-    sorted_bam = '{}/{}.sorted.bam'.format(align_dir, prefix)
-    sort_cmd = '{} sort --threads {} -o {} {}'.format(
-        utils.SAMTOOLS,
-        thread,
-        sorted_bam,
-        hisat_bam,
-    )
-
-    index_cmd = '{} index -@ {} {}'.format(
+    index_cmd = '{0} index -@ {1} {2}'.format(
         utils.SAMTOOLS,
         thread,
         sorted_bam,
@@ -41,9 +32,6 @@ def align_genome(log_file, thread, reads, outdir, prefix):
     with open(log_file, 'a') as log:
         LOGGER.debug(hisat_cmd)
         subprocess.call(hisat_cmd, shell=True, stderr=log)
-
-        LOGGER.debug(sort_cmd)
-        subprocess.call(sort_cmd, shell=True, stderr=log)
 
         LOGGER.debug(index_cmd)
         subprocess.call(index_cmd, shell=True, stderr=log)
@@ -101,10 +89,12 @@ def run_bwa(log_file, thread, cand_reads, outdir, prefix):
     return bwa_sam
 
 
-def run_ciri2(log_file, thread, bwa_sam, outdir, prefix):
+def run_ciri2(log_file, thread, bwa_sam, outdir, prefix, ciri2_exec):
     LOGGER.info('Running CIRI2 for circRNA detection ..')
     ciri_file = '{}/circ/{}.ciri'.format(outdir, prefix)
-    ciri_cmd = 'CIRI2.pl -I {} -O {} -F {} -A {} -0 -T {} -G {}'.format(
+    ciri_cmd = '{} {} -I {} -O {} -F {} -A {} -0 -T {} -G {}'.format(
+        utils.PERL,
+        ciri2_exec,
         bwa_sam,
         ciri_file,
         utils.FASTA,
@@ -120,7 +110,7 @@ def run_ciri2(log_file, thread, bwa_sam, outdir, prefix):
     return ciri_file
 
 def run_ciri3(log_file, thread, bwa_sam, outdir, prefix, ciri3_exec):
-    LOGGER.info('Running CIRI2 for circRNA detection ..')
+    LOGGER.info('Running CIRI3 for circRNA detection ..')
     ciri_file = '{}/circ/{}.ciri'.format(outdir, prefix)
     ciri_cmd = '{} -jar -Xmx20480m {} -I {} -O {} -F {} -A {} -0 -T {} -G {}'.format(
         utils.JAVA,

@@ -37,6 +37,8 @@ def main():
     parser.add_argument('-l', '--library-type', dest='library_type', metavar='INT', default=0,
                         help='Library type, 0: unstranded, 1: read1 match the sense strand,'
                              '2: read1 match the antisense strand, default: 0', )
+    parser.add_argument('--ciri3', dest='ciri3', default=False, action='store_true',
+                        help='Use CIRI3 for quantification', )
 
     parser.add_argument('-v', '--verbose', dest='verbosity', default=False, action='store_true',
                         help='Run in debugging mode', )
@@ -129,7 +131,7 @@ def main():
     # Add lib to PATH
     lib_path = os.path.dirname(os.path.split(os.path.realpath(__file__))[0]) + '/libs'
     os.environ['PATH'] = lib_path + ':' + os.environ['PATH']
-    os.chmod(lib_path + '/CIRI2.pl', 0o755)
+    ciri2_exec = lib_path + '/CIRI2.pl'
     ciri3_exec = lib_path + '/CIRI3.jar'
 
     """Start Running"""
@@ -180,8 +182,10 @@ def main():
         else:
             logger.info('No circRNA information provided, run CIRI2 for junction site prediction ..')
             bwa_sam = pipeline.run_bwa(log_file, thread, reads, outdir, prefix)
-            # ciri_file = pipeline.run_ciri2(log_file, thread, bwa_sam, outdir, prefix)
-            ciri_file = pipeline.run_ciri3(log_file, thread, bwa_sam, outdir, prefix, ciri3_exec)
+            if args.ciri3:
+                ciri_file = pipeline.run_ciri3(log_file, thread, bwa_sam, outdir, prefix, ciri3_exec)
+            else:
+                ciri_file = pipeline.run_ciri2(log_file, thread, bwa_sam, outdir, prefix, ciri2_exec)
             circ_parser = CIRCparser(ciri_file, 'CIRI2')
 
         bed_file = '{}/{}.bed'.format(outdir, prefix)
