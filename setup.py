@@ -43,6 +43,6 @@ setup(
     zip_safe=False,
     install_requires=[
         'argparse>=1.2.1', 'PyYAML==5.4', 'pysam==0.15.2', 'numpy==1.22.0',
-        'scipy==1.2.2', 'scikit-learn==0.20.3', 'numexpr==2.6.9',
+        'scipy==1.10.0', 'scikit-learn==0.20.3', 'numexpr==2.6.9',
     ],
 )
