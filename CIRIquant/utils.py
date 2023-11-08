@@ -77,21 +77,20 @@ def check_config(config_file):
         config = yaml.load(infile, Loader=yaml.BaseLoader)
 
     # check all tools
-    if 'tools' not in config:
-        raise ConfigError('Path of required software must be provided!')
+    #if 'tools' not in config:
+    #    raise ConfigError('Path of required software must be provided!')
 
     for i in 'bwa', 'hisat2', 'stringtie', 'samtools', 'java', 'perl':
-        if i not in config['tools']:
-            stat, ret = getstatusoutput('which ' + i)
-            if stat != 0:
-                raise ConfigError('Tool: {} need to be specificed'.format(i))
-            else:
-                globals()[i.upper()] = ret
+        if 'tools' not in config or i not in config['tools']:
+            cmd_path = check_software(i)
+            if cmd_path is None:
+                raise ConfigError('Tool: {} need to be specified'.format(i))
         else:
-            globals()[i.upper()] = check_file(config['tools'][i])
+            cmd_path = check_file(config['tools'][i])
+        globals()[i.upper()] = cmd_path
 
     # check required software version
-    check_samtools_version(config['tools']['samtools'])
+    check_samtools_version(SAMTOOLS)
 
     # check reference and index
     for i in 'fasta', 'gtf':
@@ -115,7 +114,20 @@ def check_config(config_file):
     else:
         raise ConfigError('Could not find hisat2 index with suffix: *.[1-8].ht2 or *.[1-8].ht2l, please check your configuration')
 
-    return config['name']
+    if 'name' in config:
+        return config['name']
+    else:
+        return str(config_file)
+
+
+def check_software(cmd):
+    # Get software path from environment
+    from commands import getstatusoutput
+    status, ret = getstatusoutput('which {}'.format(cmd))
+    if status == 0:
+        return ret
+    else:
+        return None
 
 
 def check_samtools_version(samtools):
