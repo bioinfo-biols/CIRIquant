@@ -105,5 +105,5 @@ ENV/
 .vscode/
 
 # pycharm
-.DS_Store/
+.DS_Store
 .idea/

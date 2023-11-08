@@ -145,7 +145,7 @@ def clean_tmp(outdir, prefix):
     tmp_files = [
         '{}/circ/{}_unmapped.sam'.format(outdir, prefix),
         '{}/circ/{}_denovo.bam'.format(outdir, prefix),
-        '{}/align/{}.bam'.format(outdir, prefix),
+        # '{}/align/{}.bam'.format(outdir, prefix),
     ]
     for f in tmp_files:
         if os.path.exists(f) and os.path.isfile(f):

@@ -14,7 +14,9 @@ parser <- add_option(parser, c("--bsj"), action="store", default=NA, type='chara
 parser <- add_option(parser, c("--gene"), action="store", default=NA, type='character',
                      help="gene count matrix")
 parser <- add_option(parser, c("--out"), action="store", default=NA, type='character',
-                     help="output file")
+                     help="circ DE output file")
+parser <- add_option(parser, c("--out2"), action="store", default=NA, type='character',
+                     help="gene DE output file")
 
 # opt <- parse_args(parser, args = c("--lib=AD_lib.csv",
 #                                    "--bsj=AD_bsj.csv",
@@ -23,8 +25,8 @@ parser <- add_option(parser, c("--out"), action="store", default=NA, type='chara
 opt <- parse_args(parser)
 
 # main point of program is here, do this whether or not "verbose" is set
-if (is.na(opt$lib) || is.na(opt$bsj) || is.na(opt$gene) || is.na(opt$out)) {
-    cat("Please specify --lib/--bsj/--gene/--out, refer to the manual for detailed instruction!\n",
+if (is.na(opt$lib) || is.na(opt$bsj) || is.na(opt$gene) || is.na(opt$out) || is.na(opt$out2) ) {
+    cat("Please specify --lib/--bsj/--gene/--out/--out2, refer to the manual for detailed instruction!\n",
         file=stderr())
     quit()
 }
@@ -40,7 +42,6 @@ gene_idx <- filterByExpr(gene_DGE)
 gene_DGE <- gene_DGE[gene_idx, keep.lib.sizes=FALSE]
 gene_DGE <- calcNormFactors(gene_DGE)
 
-
 if ("Subject" %in% colnames(lib_mtx)) {
     subject <- factor(lib_mtx$Subject)
     treat <- factor(lib_mtx$Group, levels=c("C", "T"))
@@ -51,26 +52,12 @@ if ("Subject" %in% colnames(lib_mtx)) {
     design <- model.matrix(~treat)
 }
 
-# design <- model.matrix(~factor(lib_mtx$Group))
-# gene_DGE <- estimateDisp(gene_DGE, design, robust = TRUE)
-# gene_fit <- glmFit(gene_DGE, design)
-# gene_lrt <- glmLRT(gene_fit)
-#
-# gene_df <- gene_lrt$table
-# gene_order <- order(gene_lrt$table$PValue)
-# gene_df$DE <- decideTestsDGE(gene_lrt)
-# gene_df <- gene_df[gene_order, ]
-# gene_df$FDR <- p.adjust(gene_df$PValue, method="fdr")
-
 circ_DGE <- DGEList(counts = bsj_mtx,
                     group = lib_mtx$Group,
                     lib.size = gene_DGE$samples[, "lib.size"],
                     norm.factors = gene_DGE$samples[, "norm.factors"])
-
 # circ_idx <- filterByExpr(circ_DGE, min.count=)
 # circ_DGE <- circ_DGE[circ_idx, , keep.lib.sizes=TRUE]
-# head(circ_df[rowSums(bsj_mtx >= 2) >= nrow(lib_mtx) / 2,])
-
 circ_DGE <- estimateDisp(circ_DGE, design, robust = TRUE)
 circ_fit <- glmFit(circ_DGE, design)
 circ_lrt <- glmLRT(circ_fit)
@@ -81,3 +68,14 @@ circ_df$DE <- as.vector(decideTestsDGE(circ_lrt))
 circ_df <- circ_df[circ_order, ]
 circ_df$FDR <- p.adjust(circ_df$PValue, method="fdr")
 write.csv(circ_df, file=opt$out, quote = FALSE)
+
+gene_DGE <- estimateDisp(gene_DGE, design, robust = TRUE)
+gene_fit <- glmFit(gene_DGE, design)
+gene_lrt <- glmLRT(gene_fit)
+
+gene_df <- gene_lrt$table
+gene_order <- order(gene_lrt$table$PValue)
+gene_df$DE <- decideTestsDGE(gene_lrt)
+gene_df <- gene_df[gene_order, ]
+gene_df$FDR <- p.adjust(gene_df$PValue, method="fdr")
+write.csv(gene_df, file=opt$out2, quote = FALSE)
