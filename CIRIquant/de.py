@@ -41,6 +41,9 @@ def main():
     # Optional parameters
     args = parser.parse_args()
 
+    if not (args.case and args.control):
+        sys.exit('No input files specified, please see manual for detailed information')
+
     thread = get_thread_num(int(args.cpu_threads))
     LOGGER = get_logger('CIRI_DE', None, False)
 
